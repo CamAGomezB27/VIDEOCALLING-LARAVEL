@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Services\LiveKitService;
 
 class AppointmentController extends Controller
 {
@@ -63,4 +64,25 @@ class AppointmentController extends Controller
 
         return response()->json(['message' => 'Cita eliminada']);
     }
+
+    public function join(Appointment $appointment): JsonResponse
+{
+    if ($appointment->status === 'cancelled') {
+        return response()->json(['error' => 'Esta cita fue cancelada'], 403);
+    }
+
+    if ($appointment->status === 'completed') {
+        return response()->json(['error' => 'Esta cita ya finalizó'], 403);
+    }
+
+    $service = new LiveKitService();
+    $data    = $service->getOrCreateRoom($appointment);
+
+    return response()->json([
+        'room_name'     => $data['room_name'],
+        'livekit_url'   => config('livekit.url'),
+        'patient_token' => $data['patient_token'],
+        'doctor_token'  => $data['doctor_token'],
+    ]);
+}
 }
