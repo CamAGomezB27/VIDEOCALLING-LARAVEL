@@ -2,9 +2,29 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Test Videollamada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consulta Virtual</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
     <style>
+      :root {
+        --bg: #090e14;
+        --surface: #111820;
+        --surface2: #1a2330;
+        --border: rgba(255, 255, 255, 0.07);
+        --accent: #00d4aa;
+        --accent2: #0066ff;
+        --danger: #ff4757;
+        --amber: #ffa502;
+        --text: #e8f0f7;
+        --muted: #5a7a96;
+        --radius: 14px;
+      }
+
       * {
         box-sizing: border-box;
         margin: 0;
@@ -12,204 +32,892 @@
       }
 
       body {
-        font-family: system-ui, sans-serif;
-        background: #0f0f0f;
-        color: #fff;
+        font-family: "DM Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text);
         height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── LOBBY ── */
+      #lobby {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 0;
+        background:
+          radial-gradient(
+            ellipse 60% 50% at 20% 60%,
+            rgba(0, 212, 170, 0.06) 0%,
+            transparent 70%
+          ),
+          radial-gradient(
+            ellipse 50% 40% at 80% 30%,
+            rgba(0, 102, 255, 0.07) 0%,
+            transparent 70%
+          ),
+          var(--bg);
+      }
+
+      .lobby-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 48px 52px;
+        width: 420px;
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      .lobby-header {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .lobby-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: rgba(0, 212, 170, 0.1);
+        border: 1px solid rgba(0, 212, 170, 0.2);
+        border-radius: 100px;
+        padding: 4px 12px;
+        width: fit-content;
+      }
+
+      .lobby-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(0.8);
+        }
+      }
+
+      .lobby-title {
+        font-size: 26px;
+        font-weight: 300;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        color: var(--text);
+      }
+
+      .lobby-title span {
+        font-weight: 500;
+      }
+
+      .lobby-meta {
+        font-size: 13px;
+        color: var(--muted);
+        font-family: "DM Mono", monospace;
+      }
+
+      .appt-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .appt-input-group label {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .appt-input-group input {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: var(--text);
+        font-family: "DM Mono", monospace;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .appt-input-group input:focus {
+        border-color: rgba(0, 212, 170, 0.4);
+      }
+
+      .role-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .role-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 18px 12px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        font-family: "DM Sans", sans-serif;
+      }
+
+      .role-btn .role-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.2s;
+      }
+
+      .role-btn.patient .role-icon {
+        background: rgba(0, 102, 255, 0.15);
+      }
+      .role-btn.doctor .role-icon {
+        background: rgba(0, 212, 170, 0.15);
+      }
+
+      .role-btn:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--text);
+        transform: translateY(-1px);
+      }
+
+      .role-btn.patient:hover {
+        border-color: rgba(0, 102, 255, 0.4);
+      }
+      .role-btn.doctor:hover {
+        border-color: rgba(0, 212, 170, 0.4);
+      }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        font-family: "DM Mono", monospace;
+        min-height: 18px;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+      }
+
+      .status-dot.active {
+        background: var(--accent);
+        animation: pulse 2s infinite;
+      }
+      .status-dot.error {
+        background: var(--danger);
+      }
+
+      /* ── ROOM ── */
+      #room {
+        display: none;
+        flex: 1;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Top bar */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 24px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        gap: 16px;
+      }
+
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .topbar-logo {
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+        text-transform: uppercase;
+      }
+
+      .topbar-divider {
+        width: 1px;
+        height: 18px;
+        background: var(--border);
+      }
+
+      .room-name-tag {
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--surface2);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .rec-indicator {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--danger);
+        background: rgba(255, 71, 87, 0.1);
+        border: 1px solid rgba(255, 71, 87, 0.25);
+        border-radius: 100px;
+        padding: 4px 12px;
+        letter-spacing: 0.06em;
+      }
+
+      .rec-indicator::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--danger);
+        animation: pulse 1s infinite;
+      }
+
+      .timer {
+        font-family: "DM Mono", monospace;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* Video grid */
+      #video-grid {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            ellipse 40% 40% at 50% 50%,
+            rgba(0, 212, 170, 0.03) 0%,
+            transparent 70%
+          ),
+          var(--bg);
+      }
+
+      .video-wrapper {
+        position: relative;
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        flex: 1;
+        max-width: 720px;
+        aspect-ratio: 16/9;
+        transition: border-color 0.3s;
+      }
+
+      .video-wrapper:only-child {
+        max-width: 860px;
+      }
+
+      .video-wrapper video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .video-label {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text);
+        background: rgba(9, 14, 20, 0.75);
+        backdrop-filter: blur(8px);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-family: "DM Mono", monospace;
+      }
+
+      .video-placeholder {
+        width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 16px;
-      }
-
-      h2 {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: #aaa;
-      }
-
-      #controls {
-        display: flex;
-        gap: 10px;
-      }
-
-      button {
-        padding: 10px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        font-weight: 500;
-      }
-
-      #btn-patient {
-        background: #2563eb;
-        color: #fff;
-      }
-      #btn-doctor {
-        background: #059669;
-        color: #fff;
-      }
-      #btn-leave {
-        background: #dc2626;
-        color: #fff;
-        display: none;
-      }
-
-      #status {
-        font-size: 0.85rem;
-        color: #888;
-      }
-
-      #video-grid {
-        display: flex;
         gap: 12px;
-        flex-wrap: wrap;
+        color: var(--muted);
+      }
+
+      .avatar-circle {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: var(--surface2);
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
         justify-content: center;
+        font-size: 24px;
       }
 
-      video {
-        width: 360px;
-        height: 270px;
+      /* Controls bar */
+      .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 18px 24px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .ctrl-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 20px;
         border-radius: 12px;
-        background: #1a1a1a;
-        object-fit: cover;
+        border: 1px solid var(--border);
+        background: var(--surface2);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 500;
+        font-family: "DM Sans", sans-serif;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
       }
 
-      .participant-label {
-        font-size: 0.75rem;
-        color: #aaa;
-        text-align: center;
-        margin-top: 4px;
+      .ctrl-btn svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
       }
 
-      .video-wrapper {
+      .ctrl-btn:hover {
+        background: #222e3d;
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .ctrl-btn.active {
+        background: rgba(0, 212, 170, 0.12);
+        border-color: rgba(0, 212, 170, 0.35);
+        color: var(--accent);
+      }
+
+      .ctrl-btn.danger {
+        background: rgba(255, 71, 87, 0.12);
+        border-color: rgba(255, 71, 87, 0.3);
+        color: var(--danger);
+      }
+
+      .ctrl-btn.danger:hover {
+        background: rgba(255, 71, 87, 0.22);
+      }
+
+      .ctrl-btn.record-btn.recording {
+        background: rgba(255, 71, 87, 0.12);
+        border-color: rgba(255, 71, 87, 0.35);
+        color: var(--danger);
+      }
+
+      .ctrl-sep {
+        width: 1px;
+        height: 32px;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+
+      /* Participant count */
+      .participant-count {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        font-family: "DM Mono", monospace;
+        margin-left: auto;
+      }
+
+      /* Toast */
+      #toast {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 13px;
+        color: var(--text);
+        opacity: 0;
+        transition: all 0.3s;
+        pointer-events: none;
+        z-index: 100;
+        white-space: nowrap;
+      }
+
+      #toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      /* Empty state in grid */
+      .empty-state {
         display: flex;
         flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .empty-state .big-icon {
+        font-size: 48px;
+        opacity: 0.3;
       }
     </style>
   </head>
   <body>
-    <h2 id="status">Elige con qué rol conectarte</h2>
+    <!-- ── LOBBY ── -->
+    <div id="lobby">
+      <div class="lobby-card">
+        <div class="lobby-header">
+          <div class="lobby-badge">LiveKit · Local</div>
+          <div class="lobby-title">Consulta <span>Virtual</span></div>
+          <div class="lobby-meta">Sistema de telemedicina · v0.1</div>
+        </div>
 
-    <div id="controls">
-      <button id="btn-patient" onclick="connect('patient')">
-        Entrar como paciente
-      </button>
-      <button id="btn-doctor" onclick="connect('doctor')">
-        Entrar como médico
-      </button>
-      <button id="btn-leave" onclick="leave()">Salir</button>
+        <div class="appt-input-group">
+          <label>ID de cita</label>
+          <input
+            type="number"
+            id="appointment-id"
+            value="1"
+            min="1"
+            placeholder="Ej: 1"
+          />
+        </div>
+
+        <div class="role-selector">
+          <button class="role-btn patient" onclick="connect('patient')">
+            <div class="role-icon">🧑‍💼</div>
+            Paciente
+          </button>
+          <button class="role-btn doctor" onclick="connect('doctor')">
+            <div class="role-icon">🩺</div>
+            Médico
+          </button>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Listo para conectar</span>
+        </div>
+      </div>
     </div>
 
-    <div id="video-grid"></div>
+    <!-- ── ROOM ── -->
+    <div id="room">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-logo">Consulta</div>
+          <div class="topbar-divider"></div>
+          <div class="room-name-tag" id="room-tag">—</div>
+        </div>
+        <div class="topbar-right">
+          <div class="rec-indicator" id="rec-indicator">REC</div>
+          <div class="timer" id="timer">00:00</div>
+        </div>
+      </div>
+
+      <div id="video-grid">
+        <div class="empty-state">
+          <div class="big-icon">📡</div>
+          <span>Conectando a la sala...</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="btn-mic" onclick="toggleMic()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+          </svg>
+          Mic
+        </button>
+
+        <button class="ctrl-btn" id="btn-cam" onclick="toggleCam()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M23 7l-7 5 7 5V7z" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+          Cámara
+        </button>
+
+        <div class="ctrl-sep"></div>
+
+        <button
+          class="ctrl-btn record-btn"
+          id="btn-record"
+          onclick="toggleRecording()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+          </svg>
+          Grabar
+        </button>
+
+        <div class="ctrl-sep"></div>
+
+        <button class="ctrl-btn danger" onclick="leave()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+            />
+          </svg>
+          Salir
+        </button>
+
+        <div class="participant-count" id="participant-count">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          1 participante
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
 
     <script>
       const API_BASE = "http://localhost:8000/api";
-      const APPOINTMENT_ID = 1; // cambia este número por el ID de tu cita
 
       let room = null;
+      let myRole = null;
+      let isRecording = false;
+      let micEnabled = true;
+      let camEnabled = true;
+      let timerInterval = null;
+      let seconds = 0;
+      let participants = 0;
 
+      // ── CONNECT ──
       async function connect(role) {
-        setStatus("Obteniendo token...");
+        const apptId = document.getElementById("appointment-id").value;
+        if (!apptId) return showToast("Ingresa un ID de cita");
 
-        // 1. Pedir token a Laravel
-        const res = await fetch(
-          `${API_BASE}/appointments/${APPOINTMENT_ID}/join`,
-        );
-        const data = await res.json();
-
-        const token =
-          role === "patient" ? data.patient_token : data.doctor_token;
-
-        // 2. Crear sala LiveKit
-        room = new LivekitClient.Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
-
-        // 3. Escuchar participantes remotos
-        room.on(
-          LivekitClient.RoomEvent.TrackSubscribed,
-          (track, _pub, participant) => {
-            if (track.kind === "video") {
-              addVideoElement(track, participant.identity);
-            }
-          },
-        );
-
-        room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
-          track.detach().forEach((el) => el.parentElement?.remove());
-        });
-
-        room.on(LivekitClient.RoomEvent.Disconnected, () => {
-          setStatus("Desconectado");
-          document.getElementById("btn-leave").style.display = "none";
-          document.getElementById("btn-patient").style.display = "inline-block";
-          document.getElementById("btn-doctor").style.display = "inline-block";
-        });
-
-        // 4. Conectar
-        await room.connect(data.livekit_url, token);
-        setStatus(`Conectado como ${role} · sala: ${data.room_name}`);
-
-        // 5. Publicar lo que esté disponible (cámara opcional)
-        let localTracks = [];
+        myRole = role;
+        setStatus("Obteniendo token...", "active");
 
         try {
-          localTracks = await LivekitClient.createLocalTracks({
-            audio: true,
-            video: true,
+          const res = await fetch(`${API_BASE}/appointments/${apptId}/join`);
+          if (!res.ok) throw new Error(`Error ${res.status}`);
+          const data = await res.json();
+
+          const token =
+            role === "patient" ? data.patient_token : data.doctor_token;
+
+          room = new LivekitClient.Room({
+            adaptiveStream: true,
+            dynacast: true,
           });
-        } catch (e) {
-          setStatus(`Sin cámara, intentando solo audio...`);
+
+          room.on(
+            LivekitClient.RoomEvent.ParticipantConnected,
+            updateParticipants,
+          );
+          room.on(
+            LivekitClient.RoomEvent.ParticipantDisconnected,
+            updateParticipants,
+          );
+
+          room.on(
+            LivekitClient.RoomEvent.TrackSubscribed,
+            (track, _pub, participant) => {
+              if (track.kind === "video") {
+                addVideo(track, participant.identity, false);
+              }
+            },
+          );
+
+          room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+            track.detach().forEach((el) => {
+              el.closest(".video-wrapper")?.remove();
+              updateParticipants();
+            });
+          });
+
+          room.on(LivekitClient.RoomEvent.Disconnected, () => {
+            stopTimer();
+            showLobby();
+            setStatus("Desconectado", "");
+          });
+
+          await room.connect(data.livekit_url, token);
+
+          // Mostrar sala
+          document.getElementById("lobby").style.display = "none";
+          document.getElementById("room").style.display = "flex";
+          document.getElementById("room-tag").textContent = data.room_name;
+          document.getElementById("video-grid").innerHTML = "";
+
+          startTimer();
+          updateParticipants();
+
+          // Publicar tracks locales
+          let localTracks = [];
           try {
             localTracks = await LivekitClient.createLocalTracks({
               audio: true,
-              video: false,
+              video: true,
             });
-          } catch (e2) {
-            setStatus(`Conectado sin audio ni video · sala: ${data.room_name}`);
+          } catch {
+            try {
+              localTracks = await LivekitClient.createLocalTracks({
+                audio: true,
+                video: false,
+              });
+              showToast("Sin cámara — conectado con audio");
+            } catch {
+              showToast("Conectado sin audio ni video");
+            }
           }
-        }
 
-        for (const track of localTracks) {
-          await room.localParticipant.publishTrack(track);
-          if (track.kind === "video") {
-            addVideoElement(track, `tú (${role})`, true);
+          for (const track of localTracks) {
+            await room.localParticipant.publishTrack(track);
+            if (track.kind === "video") {
+              addVideo(track, `tú (${role})`, true);
+            }
           }
+        } catch (e) {
+          setStatus("Error al conectar", "error");
+          showToast("No se pudo conectar: " + e.message);
         }
-
-        document.getElementById("btn-patient").style.display = "none";
-        document.getElementById("btn-doctor").style.display = "none";
-        document.getElementById("btn-leave").style.display = "inline-block";
       }
 
-      function addVideoElement(track, identity, muted = false) {
+      // ── VIDEO ──
+      function addVideo(track, identity, muted) {
+        const grid = document.getElementById("video-grid");
+
         const wrapper = document.createElement("div");
         wrapper.className = "video-wrapper";
-        wrapper.id = `video-${identity}`;
+        wrapper.id = "vid-" + identity.replace(/\s/g, "-");
 
         const videoEl = track.attach();
-        videoEl.muted = muted; // mutear el propio audio para evitar eco
+        videoEl.muted = muted;
 
         const label = document.createElement("div");
-        label.className = "participant-label";
+        label.className = "video-label";
         label.textContent = identity;
 
         wrapper.appendChild(videoEl);
         wrapper.appendChild(label);
-        document.getElementById("video-grid").appendChild(wrapper);
+        grid.appendChild(wrapper);
+
+        updateParticipants();
       }
 
+      // ── MIC ──
+      function toggleMic() {
+        if (!room) return;
+        micEnabled = !micEnabled;
+        room.localParticipant.setMicrophoneEnabled(micEnabled);
+
+        const btn = document.getElementById("btn-mic");
+        btn.classList.toggle("active", !micEnabled);
+        btn.querySelector("svg").innerHTML = micEnabled
+          ? `<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>`
+          : `<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>`;
+        showToast(micEnabled ? "Micrófono activado" : "Micrófono silenciado");
+      }
+
+      // ── CAMERA ──
+      function toggleCam() {
+        if (!room) return;
+        camEnabled = !camEnabled;
+        room.localParticipant.setCameraEnabled(camEnabled);
+        const btn = document.getElementById("btn-cam");
+        btn.classList.toggle("active", !camEnabled);
+        showToast(camEnabled ? "Cámara activada" : "Cámara desactivada");
+      }
+
+      // ── RECORDING ──
+      async function toggleRecording() {
+        const apptId = document.getElementById("appointment-id").value;
+        const btn = document.getElementById("btn-record");
+        const rec = document.getElementById("rec-indicator");
+
+        if (!isRecording) {
+          try {
+            const res = await fetch(
+              `${API_BASE}/appointments/${apptId}/recording/start`,
+              { method: "POST" },
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al iniciar");
+
+            isRecording = true;
+            btn.classList.add("recording");
+            btn.querySelector("svg").style.color = "var(--danger)";
+            btn.childNodes[btn.childNodes.length - 1].textContent = " Detener";
+            rec.style.display = "flex";
+            showToast("Grabación iniciada");
+          } catch (e) {
+            showToast("Error: " + e.message);
+          }
+        } else {
+          try {
+            await fetch(`${API_BASE}/appointments/${apptId}/recording/stop`, {
+              method: "POST",
+            });
+            isRecording = false;
+            btn.classList.remove("recording");
+            btn.childNodes[btn.childNodes.length - 1].textContent = " Grabar";
+            rec.style.display = "none";
+            showToast("Grabación guardada");
+          } catch (e) {
+            showToast("Error al detener: " + e.message);
+          }
+        }
+      }
+
+      // ── LEAVE ──
       async function leave() {
+        if (isRecording) await toggleRecording();
         await room?.disconnect();
         document.getElementById("video-grid").innerHTML = "";
+        stopTimer();
+        showLobby();
       }
 
-      function setStatus(msg) {
-        document.getElementById("status").textContent = msg;
+      function showLobby() {
+        document.getElementById("room").style.display = "none";
+        document.getElementById("lobby").style.display = "flex";
+        document.getElementById("rec-indicator").style.display = "none";
+        isRecording = false;
+        seconds = 0;
+      }
+
+      // ── TIMER ──
+      function startTimer() {
+        seconds = 0;
+        timerInterval = setInterval(() => {
+          seconds++;
+          const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+          const s = String(seconds % 60).padStart(2, "0");
+          document.getElementById("timer").textContent = `${m}:${s}`;
+        }, 1000);
+      }
+
+      function stopTimer() {
+        clearInterval(timerInterval);
+        document.getElementById("timer").textContent = "00:00";
+      }
+
+      // ── PARTICIPANTS ──
+      function updateParticipants() {
+        if (!room) return;
+        const count = room.remoteParticipants.size + 1;
+        const el = document.getElementById("participant-count");
+        el.childNodes[el.childNodes.length - 1].textContent =
+          ` ${count} participante${count !== 1 ? "s" : ""}`;
+      }
+
+      // ── STATUS ──
+      function setStatus(msg, type) {
+        document.getElementById("status-text").textContent = msg;
+        const dot = document.getElementById("status-dot");
+        dot.className = "status-dot" + (type ? " " + type : "");
+      }
+
+      // ── TOAST ──
+      function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        setTimeout(() => t.classList.remove("show"), 2800);
       }
     </script>
   </body>
