@@ -18,6 +18,7 @@ class Appointment extends Model
         'duration',
         'status',
         'livekit_room_name',
+        'egress_id', 
         'started_at',
         'ended_at',
         'notes',

@@ -66,23 +66,48 @@ class AppointmentController extends Controller
     }
 
     public function join(Appointment $appointment): JsonResponse
-{
-    if ($appointment->status === 'cancelled') {
-        return response()->json(['error' => 'Esta cita fue cancelada'], 403);
+    {
+        if ($appointment->status === 'cancelled') {
+            return response()->json(['error' => 'Esta cita fue cancelada'], 403);
+        }
+
+        if ($appointment->status === 'completed') {
+            return response()->json(['error' => 'Esta cita ya finalizó'], 403);
+        }
+
+        $service = new LiveKitService();
+        $data    = $service->getOrCreateRoom($appointment);
+
+        return response()->json([
+            'room_name'     => $data['room_name'],
+            'livekit_url'   => config('livekit.url'),
+            'patient_token' => $data['patient_token'],
+            'doctor_token'  => $data['doctor_token'],
+        ]);
     }
 
-    if ($appointment->status === 'completed') {
-        return response()->json(['error' => 'Esta cita ya finalizó'], 403);
+    public function startRecording(Appointment $appointment): JsonResponse
+    {
+        if (!$appointment->livekit_room_name) {
+            return response()->json(['error' => 'La sala no existe aún'], 422);
+        }
+
+        $egressId = (new LiveKitService())->startRecording($appointment);
+
+        return response()->json([
+            'message'   => 'Grabación iniciada',
+            'egress_id' => $egressId,
+        ]);
     }
 
-    $service = new LiveKitService();
-    $data    = $service->getOrCreateRoom($appointment);
+    public function stopRecording(Appointment $appointment): JsonResponse
+    {
+        if (!$appointment->egress_id) {
+            return response()->json(['error' => 'No hay grabación activa'], 422);
+        }
 
-    return response()->json([
-        'room_name'     => $data['room_name'],
-        'livekit_url'   => config('livekit.url'),
-        'patient_token' => $data['patient_token'],
-        'doctor_token'  => $data['doctor_token'],
-    ]);
-}
+        (new LiveKitService())->stopRecording($appointment);
+
+        return response()->json(['message' => 'Grabación detenida']);
+    }
 }
