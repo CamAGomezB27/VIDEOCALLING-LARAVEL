@@ -2,215 +2,157 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>Test Videollamada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consulta Virtual</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        font-family: system-ui, sans-serif;
-        background: #0f0f0f;
-        color: #fff;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-      }
-
-      h2 {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: #aaa;
-      }
-
-      #controls {
-        display: flex;
-        gap: 10px;
-      }
-
-      button {
-        padding: 10px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        cursor: pointer;
-        font-weight: 500;
-      }
-
-      #btn-patient {
-        background: #2563eb;
-        color: #fff;
-      }
-      #btn-doctor {
-        background: #059669;
-        color: #fff;
-      }
-      #btn-leave {
-        background: #dc2626;
-        color: #fff;
-        display: none;
-      }
-
-      #status {
-        font-size: 0.85rem;
-        color: #888;
-      }
-
-      #video-grid {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-
-      video {
-        width: 360px;
-        height: 270px;
-        border-radius: 12px;
-        background: #1a1a1a;
-        object-fit: cover;
-      }
-
-      .participant-label {
-        font-size: 0.75rem;
-        color: #aaa;
-        text-align: center;
-        margin-top: 4px;
-      }
-
-      .video-wrapper {
-        display: flex;
-        flex-direction: column;
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="funciones.js" defer></script>
   </head>
   <body>
-    <h2 id="status">Elige con qué rol conectarte</h2>
+    <!-- ── LOBBY ── -->
+    <div id="lobby">
+      <div class="lobby-card">
+        <div class="lobby-header">
+          <div class="lobby-badge">LiveKit · Local</div>
+          <div class="lobby-title">Consulta <span>Virtual</span></div>
+          <div class="lobby-meta">Sistema de telemedicina · v0.1</div>
+        </div>
 
-    <div id="controls">
-      <button id="btn-patient" onclick="connect('patient')">
-        Entrar como paciente
-      </button>
-      <button id="btn-doctor" onclick="connect('doctor')">
-        Entrar como médico
-      </button>
-      <button id="btn-leave" onclick="leave()">Salir</button>
+        <div class="appt-input-group">
+          <label>ID de cita</label>
+          <input
+            type="number"
+            id="appointment-id"
+            value="1"
+            min="1"
+            placeholder="Ej: 1"
+          />
+        </div>
+
+        <div class="role-selector">
+          <button class="role-btn patient" onclick="connect('patient')">
+            <div class="role-icon">🧑‍💼</div>
+            Paciente
+          </button>
+          <button class="role-btn doctor" onclick="connect('doctor')">
+            <div class="role-icon">🩺</div>
+            Médico
+          </button>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Listo para conectar</span>
+        </div>
+      </div>
     </div>
 
-    <div id="video-grid"></div>
+    <!-- ── ROOM ── -->
+    <div id="room">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-logo">Consulta</div>
+          <div class="topbar-divider"></div>
+          <div class="room-name-tag" id="room-tag">—</div>
+        </div>
+        <div class="topbar-right">
+          <div class="rec-indicator" id="rec-indicator">REC</div>
+          <div class="timer" id="timer">00:00</div>
+        </div>
+      </div>
 
-    <script>
-      const API_BASE = "http://localhost:8000/api";
-      const APPOINTMENT_ID = 1; // cambia este número por el ID de tu cita
+      <div id="video-grid">
+        <div class="empty-state">
+          <div class="big-icon">📡</div>
+          <span>Conectando a la sala...</span>
+        </div>
+      </div>
 
-      let room = null;
+      <div class="controls">
+        <button class="ctrl-btn" id="btn-mic" onclick="toggleMic()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+          </svg>
+          Mic
+        </button>
 
-      async function connect(role) {
-        setStatus("Obteniendo token...");
+        <button class="ctrl-btn" id="btn-cam" onclick="toggleCam()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M23 7l-7 5 7 5V7z" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+          Cámara
+        </button>
 
-        // 1. Pedir token a Laravel
-        const res = await fetch(
-          `${API_BASE}/appointments/${APPOINTMENT_ID}/join`,
-        );
-        const data = await res.json();
+        <div class="ctrl-sep"></div>
 
-        const token =
-          role === "patient" ? data.patient_token : data.doctor_token;
+        <button
+          class="ctrl-btn record-btn"
+          id="btn-record"
+          onclick="toggleRecording()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+          </svg>
+          Grabar
+        </button>
 
-        // 2. Crear sala LiveKit
-        room = new LivekitClient.Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
+        <div class="ctrl-sep"></div>
 
-        // 3. Escuchar participantes remotos
-        room.on(
-          LivekitClient.RoomEvent.TrackSubscribed,
-          (track, _pub, participant) => {
-            if (track.kind === "video") {
-              addVideoElement(track, participant.identity);
-            }
-          },
-        );
+        <button class="ctrl-btn danger" onclick="leave()">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+            />
+          </svg>
+          Salir
+        </button>
 
-        room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
-          track.detach().forEach((el) => el.parentElement?.remove());
-        });
+        <div class="participant-count" id="participant-count">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          1 participante
+        </div>
+      </div>
+    </div>
 
-        room.on(LivekitClient.RoomEvent.Disconnected, () => {
-          setStatus("Desconectado");
-          document.getElementById("btn-leave").style.display = "none";
-          document.getElementById("btn-patient").style.display = "inline-block";
-          document.getElementById("btn-doctor").style.display = "inline-block";
-        });
-
-        // 4. Conectar
-        await room.connect(data.livekit_url, token);
-        setStatus(`Conectado como ${role} · sala: ${data.room_name}`);
-
-        // 5. Publicar lo que esté disponible (cámara opcional)
-        let localTracks = [];
-
-        try {
-          localTracks = await LivekitClient.createLocalTracks({
-            audio: true,
-            video: true,
-          });
-        } catch (e) {
-          setStatus(`Sin cámara, intentando solo audio...`);
-          try {
-            localTracks = await LivekitClient.createLocalTracks({
-              audio: true,
-              video: false,
-            });
-          } catch (e2) {
-            setStatus(`Conectado sin audio ni video · sala: ${data.room_name}`);
-          }
-        }
-
-        for (const track of localTracks) {
-          await room.localParticipant.publishTrack(track);
-          if (track.kind === "video") {
-            addVideoElement(track, `tú (${role})`, true);
-          }
-        }
-
-        document.getElementById("btn-patient").style.display = "none";
-        document.getElementById("btn-doctor").style.display = "none";
-        document.getElementById("btn-leave").style.display = "inline-block";
-      }
-
-      function addVideoElement(track, identity, muted = false) {
-        const wrapper = document.createElement("div");
-        wrapper.className = "video-wrapper";
-        wrapper.id = `video-${identity}`;
-
-        const videoEl = track.attach();
-        videoEl.muted = muted; // mutear el propio audio para evitar eco
-
-        const label = document.createElement("div");
-        label.className = "participant-label";
-        label.textContent = identity;
-
-        wrapper.appendChild(videoEl);
-        wrapper.appendChild(label);
-        document.getElementById("video-grid").appendChild(wrapper);
-      }
-
-      async function leave() {
-        await room?.disconnect();
-        document.getElementById("video-grid").innerHTML = "";
-      }
-
-      function setStatus(msg) {
-        document.getElementById("status").textContent = msg;
-      }
-    </script>
+    <div id="toast"></div>
   </body>
 </html>
