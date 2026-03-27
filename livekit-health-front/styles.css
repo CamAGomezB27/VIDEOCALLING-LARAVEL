@@ -97,6 +97,14 @@ body {
   letter-spacing:.08em; text-transform:uppercase; border-radius:100px;
   padding:4px 12px; width:fit-content; margin-bottom:4px;
 }
+.ctrl-btn.success {
+  background: #10b981;
+  color: white;
+}
+
+.ctrl-btn.success:hover {
+  background: #059669;
+}
 .form-role-badge.patient { color:#5599ff; background:rgba(0,102,255,.1); border:1px solid rgba(0,102,255,.2); }
 .form-role-badge.doctor  { color:var(--accent); background:rgba(0,212,170,.1); border:1px solid rgba(0,212,170,.2); }
 .form-header h2 { font-size:26px; font-weight:300; letter-spacing:-0.02em; }

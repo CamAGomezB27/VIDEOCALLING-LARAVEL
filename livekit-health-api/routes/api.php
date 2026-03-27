@@ -17,3 +17,4 @@ Route::post('appointments/{appointment}/recording/start', [AppointmentController
 Route::post('appointments/{appointment}/recording/stop',  [AppointmentController::class, 'stopRecording']);
 Route::get('/appointments/{appointment}/chat', [AppointmentChatController::class, 'index']);
 Route::post('/appointments/{appointment}/chat', [AppointmentChatController::class, 'store']);
+Route::post('/appointments/{appointment}/end', [AppointmentController::class, 'endMeeting']);

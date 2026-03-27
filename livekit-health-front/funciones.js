@@ -364,15 +364,18 @@ async function enterRoom(apptId) {
     room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
       try {
         const msg = JSON.parse(new TextDecoder().decode(payload));
+
         if (msg.type === "chat") {
-          appendMessage(msg.text, msg.sender, false);
+          appendMessage(msg.text, msg.sender || "Participante", false);
           if (!chatOpen) {
             unreadCount++;
             updateUnreadBadge();
           }
+        } else if (msg.type === "system") {
+          appendSystemMsg(msg.text);
         }
-      } catch {
-        /* ignorar payloads no-chat */
+      } catch (e) {
+        console.warn("Mensaje no válido recibido");
       }
     });
 
@@ -675,6 +678,62 @@ async function leaveRoom() {
   chatOpen = false;
   unreadCount = 0;
   await loadDashboard();
+}
+
+// ──────────────────────────────────────────
+// CERRAR REUNIÓN (Oficial)
+// ──────────────────────────────────────────
+async function endMeeting() {
+  if (!currentApptId) return;
+
+  const confirmEnd = confirm(
+    "¿Estás seguro de que deseas cerrar la reunión?\n\nEsta acción cambiará el estado de la cita a 'Completada' y desconectará a todos.",
+  );
+
+  if (!confirmEnd) return;
+
+  try {
+    // 1. Detener grabación si está activa
+    if (isRecording) {
+      await toggleRecording();
+    }
+
+    // 2. Notificar al backend que la cita ha finalizado
+    const res = await fetch(`${API_BASE}/appointments/${currentApptId}/end`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn("No se pudo actualizar el estado de la cita en el backend");
+    }
+
+    // 3. Mostrar mensaje de despedida a los participantes
+    const farewellMsg = {
+      type: "system",
+      text: "La reunión ha sido finalizada por el anfitrión.",
+    };
+
+    const encoded = new TextEncoder().encode(JSON.stringify(farewellMsg));
+    await room?.localParticipant.publishData(encoded, { reliable: true });
+
+    // 4. Desconectar de LiveKit
+    await room?.disconnect();
+
+    showToast("Reunión finalizada correctamente");
+
+    // 5. Volver al dashboard
+    setTimeout(() => {
+      loadDashboard();
+    }, 800);
+  } catch (err) {
+    console.error(err);
+    showToast("Error al cerrar la reunión");
+
+    // En caso de error, al menos desconectamos
+    await room?.disconnect();
+    loadDashboard();
+  }
 }
 
 // ──────────────────────────────────────────
