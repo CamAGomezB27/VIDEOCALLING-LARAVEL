@@ -9,6 +9,8 @@ let micEnabled = true;
 let camEnabled = true;
 let timerInterval = null;
 let seconds = 0;
+let chatOpen = false;
+let unreadCount = 0;
 
 // ──────────────────────────────────────────
 // NAVEGACIÓN
@@ -80,8 +82,7 @@ async function handleLogin() {
   hideError("form-error");
 
   try {
-    const user = await verifyIdentity(email, docNumber);
-    currentUser = user;
+    currentUser = await verifyIdentity(email, docNumber);
     setStatus("Identidad verificada", "active");
     await loadDashboard();
   } catch (err) {
@@ -93,13 +94,11 @@ async function handleLogin() {
 }
 
 async function verifyIdentity(email, docNumber) {
-  // Buscar en la lista de médicos o pacientes según el rol
   const endpoint = currentRole === "patient" ? "patients" : "doctors";
   const res = await fetch(`${API_BASE}/${endpoint}`);
   if (!res.ok) throw new Error("No se pudo conectar con la API");
 
   const list = await res.json();
-
   const field =
     currentRole === "patient" ? "document_number" : "license_number";
   const found = list.find(
@@ -107,12 +106,10 @@ async function verifyIdentity(email, docNumber) {
       u.email.toLowerCase() === email.toLowerCase() && u[field] === docNumber,
   );
 
-  if (!found) {
+  if (!found)
     throw new Error(
       "Credenciales incorrectas. Verifica tu correo y documento.",
     );
-  }
-
   return found;
 }
 
@@ -120,7 +117,6 @@ async function verifyIdentity(email, docNumber) {
 // PASO 3 — dashboard
 // ──────────────────────────────────────────
 async function loadDashboard() {
-  // Llenar sidebar
   document.getElementById("sidebar-name").textContent = currentUser.name;
   document.getElementById("sidebar-role").textContent =
     currentRole === "patient" ? "Paciente" : "Médico";
@@ -143,7 +139,6 @@ function showTab(tab) {
   document
     .querySelectorAll(".nav-item")
     .forEach((n) => n.classList.remove("active"));
-
   document.getElementById(`tab-${tab}`).classList.add("active");
   document.getElementById(`nav-${tab}`).classList.add("active");
 }
@@ -155,26 +150,21 @@ async function loadAppointments() {
   try {
     const res = await fetch(`${API_BASE}/appointments`);
     const all = await res.json();
-
-    // Filtrar solo las citas de este usuario
-    const myId = currentUser.id;
     const field = currentRole === "patient" ? "patient_id" : "doctor_id";
-    const mine = all.filter((a) => a[field] === myId);
+    const mine = all.filter((a) => a[field] === currentUser.id);
 
     if (mine.length === 0) {
       listEl.innerHTML = `
         <div class="empty-appointments">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
           <span>No tienes citas aún</span>
         </div>`;
       return;
     }
 
-    // Ordenar: las próximas primero
     mine.sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
     listEl.innerHTML = mine
@@ -208,7 +198,7 @@ async function loadAppointments() {
             ${
               canJoin
                 ? `
-              <button class="btn-join" onclick="enterRoom(${appt.id})">
+              <button class="btn-join" type="button" onclick="enterRoom(${appt.id})">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
                 </svg>
@@ -225,19 +215,18 @@ async function loadAppointments() {
   }
 }
 
-function statusLabel(status) {
+function statusLabel(s) {
   return (
     {
       scheduled: "Programada",
       in_progress: "En curso",
       completed: "Completada",
       cancelled: "Cancelada",
-    }[status] || status
+    }[s] || s
   );
 }
 
 async function loadOtherParty() {
-  // Cargar la lista de la contraparte para el select de agendamiento
   const endpoint = currentRole === "patient" ? "doctors" : "patients";
   const label = currentRole === "patient" ? "Médico" : "Paciente";
 
@@ -247,7 +236,6 @@ async function loadOtherParty() {
     const res = await fetch(`${API_BASE}/${endpoint}`);
     const list = await res.json();
     const sel = document.getElementById("select-other-party");
-
     sel.innerHTML =
       `<option value="">Selecciona un ${label.toLowerCase()}...</option>` +
       list.map((u) => `<option value="${u.id}">${u.name}</option>`).join("");
@@ -256,7 +244,6 @@ async function loadOtherParty() {
       `<option value="">Error al cargar</option>`;
   }
 
-  // Preseleccionar fecha mínima (ahora + 1 hora)
   const min = new Date(Date.now() + 60 * 60 * 1000);
   const pad = (n) => String(n).padStart(2, "0");
   const minStr = `${min.getFullYear()}-${pad(min.getMonth() + 1)}-${pad(min.getDate())}T${pad(min.getHours())}:${pad(min.getMinutes())}`;
@@ -323,6 +310,13 @@ async function scheduleAppointment() {
   }
 }
 
+function logout() {
+  currentUser = null;
+  currentRole = null;
+  currentApptId = null;
+  showScreen("screen-role");
+}
+
 // ──────────────────────────────────────────
 // ENTRAR A SALA
 // ──────────────────────────────────────────
@@ -339,12 +333,18 @@ async function enterRoom(apptId) {
 
     room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
 
-    room.on(LivekitClient.RoomEvent.ParticipantConnected, updateParticipants);
-    room.on(
-      LivekitClient.RoomEvent.ParticipantDisconnected,
-      updateParticipants,
-    );
+    // Eventos de participantes
+    room.on(LivekitClient.RoomEvent.ParticipantConnected, (participant) => {
+      updateParticipants();
+      appendSystemMsg(`${participant.identity} se unió a la consulta`);
+    });
 
+    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, (participant) => {
+      updateParticipants();
+      appendSystemMsg(`${participant.identity} salió de la consulta`);
+    });
+
+    // Video/audio remoto
     room.on(
       LivekitClient.RoomEvent.TrackSubscribed,
       (track, _pub, participant) => {
@@ -360,6 +360,25 @@ async function enterRoom(apptId) {
       });
     });
 
+    // ── CHAT: recibir mensajes vía Data Channel ──
+    room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload));
+
+        if (msg.type === "chat") {
+          appendMessage(msg.text, msg.sender || "Participante", false);
+          if (!chatOpen) {
+            unreadCount++;
+            updateUnreadBadge();
+          }
+        } else if (msg.type === "system") {
+          appendSystemMsg(msg.text);
+        }
+      } catch (e) {
+        console.warn("Mensaje no válido recibido");
+      }
+    });
+
     room.on(LivekitClient.RoomEvent.Disconnected, () => {
       stopTimer();
       loadDashboard();
@@ -367,9 +386,30 @@ async function enterRoom(apptId) {
 
     await room.connect(data.livekit_url, token);
 
+    // Cargar historial de mensajes persistentes
+    await loadChatHistory(apptId);
+
+    // Mostrar sala
+    showScreen("screen-room");
+
+    // Mostrar sala
     showScreen("screen-room");
     document.getElementById("room-tag").textContent = data.room_name;
     document.getElementById("video-grid").innerHTML = "";
+    document.getElementById("chat-messages").innerHTML = `
+      <div class="chat-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>El chat está vacío.<br/>Sé el primero en escribir.</span>
+      </div>`;
+
+    // Resetear chat state
+    chatOpen = false;
+    unreadCount = 0;
+    document.getElementById("chat-panel").classList.remove("open");
+    document.getElementById("chat-toggle-btn").classList.remove("active");
+    updateUnreadBadge();
 
     document.getElementById("user-info-bar").innerHTML = `
       <div class="user-chip">
@@ -380,7 +420,7 @@ async function enterRoom(apptId) {
     startTimer();
     updateParticipants();
 
-    // Publicar tracks
+    // Publicar tracks locales
     let localTracks = [];
     try {
       localTracks = await LivekitClient.createLocalTracks({
@@ -409,11 +449,147 @@ async function enterRoom(apptId) {
   }
 }
 
-function logout() {
-  currentUser = null;
-  currentRole = null;
-  currentApptId = null;
-  showScreen("screen-role");
+// ──────────────────────────────────────────
+// CHAT
+// ──────────────────────────────────────────
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById("chat-panel");
+  const btn = document.getElementById("chat-toggle-btn");
+
+  panel.classList.toggle("open", chatOpen);
+  btn.classList.toggle("active", chatOpen);
+
+  if (chatOpen) {
+    unreadCount = 0;
+    updateUnreadBadge();
+    // scroll al final
+    setTimeout(() => {
+      const msgs = document.getElementById("chat-messages");
+      msgs.scrollTop = msgs.scrollHeight;
+      document.getElementById("chat-input").focus();
+    }, 320);
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text || !room || !currentApptId || !currentUser) return;
+
+  const messagePayload = {
+    type: "chat",
+    text: text,
+    sender: currentUser.name,
+    sender_id: currentUser.id,
+    sender_role: currentRole,
+  };
+
+  try {
+    // 1. Guardar el mensaje en la base de datos (persistencia)
+    await fetch(`${API_BASE}/appointments/${currentApptId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        sender_id: currentUser.id,
+        sender_role: currentRole,
+      }),
+    });
+
+    // 2. Enviar por LiveKit (tiempo real)
+    const encoded = new TextEncoder().encode(JSON.stringify(messagePayload));
+    await room.localParticipant.publishData(encoded, { reliable: true });
+
+    // 3. Mostrar en pantalla
+    appendMessage(text, currentUser.name, true);
+
+    input.value = "";
+  } catch (err) {
+    console.error("Error enviando mensaje:", err);
+    showToast("Error al enviar el mensaje");
+  }
+}
+
+// Cargar historial de mensajes desde el backend
+async function loadChatHistory(apptId) {
+  if (!apptId) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/appointments/${apptId}/chat`);
+
+    if (!res.ok) {
+      console.warn("No se pudo cargar el historial de chat");
+      return;
+    }
+
+    const messages = await res.json();
+    const container = document.getElementById("chat-messages");
+
+    // Limpiar el empty state
+    const empty = container.querySelector(".chat-empty");
+    if (empty) empty.remove();
+
+    messages.forEach((msg) => {
+      const isMine = parseInt(msg.sender_id) === parseInt(currentUser.id);
+      appendMessage(msg.message, msg.sender_name || "Participante", isMine);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  } catch (e) {
+    console.warn("Error cargando historial de chat:", e);
+  }
+}
+
+function appendMessage(text, sender, isMine) {
+  const msgs = document.getElementById("chat-messages");
+
+  // Quitar el empty state si existe
+  const empty = msgs.querySelector(".chat-empty");
+  if (empty) empty.remove();
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const div = document.createElement("div");
+  div.className = `chat-msg ${isMine ? "mine" : "theirs"}`;
+  div.innerHTML = `
+    <div class="chat-msg-meta">${isMine ? "Tú" : sender}</div>
+    <div class="chat-msg-bubble">${escapeHtml(text)}</div>
+    <div class="chat-msg-time">${timeStr}</div>`;
+
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function appendSystemMsg(text) {
+  const msgs = document.getElementById("chat-messages");
+  const div = document.createElement("div");
+  div.className = "chat-system";
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function updateUnreadBadge() {
+  const badge = document.getElementById("chat-unread");
+  if (unreadCount > 0 && !chatOpen) {
+    badge.textContent = unreadCount > 9 ? "9+" : unreadCount;
+    badge.style.display = "block";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ──────────────────────────────────────────
@@ -499,11 +675,69 @@ async function leaveRoom() {
   await room?.disconnect();
   document.getElementById("video-grid").innerHTML = "";
   stopTimer();
+  chatOpen = false;
+  unreadCount = 0;
   await loadDashboard();
 }
 
 // ──────────────────────────────────────────
-// TIMER
+// CERRAR REUNIÓN (Oficial)
+// ──────────────────────────────────────────
+async function endMeeting() {
+  if (!currentApptId) return;
+
+  const confirmEnd = confirm(
+    "¿Estás seguro de que deseas cerrar la reunión?\n\nEsta acción cambiará el estado de la cita a 'Completada' y desconectará a todos.",
+  );
+
+  if (!confirmEnd) return;
+
+  try {
+    // 1. Detener grabación si está activa
+    if (isRecording) {
+      await toggleRecording();
+    }
+
+    // 2. Notificar al backend que la cita ha finalizado
+    const res = await fetch(`${API_BASE}/appointments/${currentApptId}/end`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      console.warn("No se pudo actualizar el estado de la cita en el backend");
+    }
+
+    // 3. Mostrar mensaje de despedida a los participantes
+    const farewellMsg = {
+      type: "system",
+      text: "La reunión ha sido finalizada por el anfitrión.",
+    };
+
+    const encoded = new TextEncoder().encode(JSON.stringify(farewellMsg));
+    await room?.localParticipant.publishData(encoded, { reliable: true });
+
+    // 4. Desconectar de LiveKit
+    await room?.disconnect();
+
+    showToast("Reunión finalizada correctamente");
+
+    // 5. Volver al dashboard
+    setTimeout(() => {
+      loadDashboard();
+    }, 800);
+  } catch (err) {
+    console.error(err);
+    showToast("Error al cerrar la reunión");
+
+    // En caso de error, al menos desconectamos
+    await room?.disconnect();
+    loadDashboard();
+  }
+}
+
+// ──────────────────────────────────────────
+// TIMER / PARTICIPANTS
 // ──────────────────────────────────────────
 function startTimer() {
   seconds = 0;
@@ -546,15 +780,14 @@ function showError(id, msg) {
 }
 
 function hideError(id) {
-  const el = document.getElementById(id);
-  if (el) el.classList.remove("visible");
+  document.getElementById(id)?.classList.remove("visible");
 }
 
 function setSubmitLoading(loading) {
-  const btn = document.getElementById("submit-btn");
-  const label = document.getElementById("submit-label");
-  btn.disabled = loading;
-  label.textContent = loading ? "Verificando..." : "Continuar";
+  document.getElementById("submit-btn").disabled = loading;
+  document.getElementById("submit-label").textContent = loading
+    ? "Verificando..."
+    : "Continuar";
 }
 
 function showToast(msg) {
@@ -569,9 +802,17 @@ function showToast(msg) {
 // ──────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   showScreen("screen-role");
+
   ["input-email", "input-document"].forEach((id) => {
     document.getElementById(id)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleLogin();
     });
+  });
+
+  document.getElementById("chat-input")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
   });
 });
