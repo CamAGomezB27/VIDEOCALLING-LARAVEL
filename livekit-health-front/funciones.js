@@ -324,7 +324,7 @@ async function scheduleAppointment() {
 }
 
 // ──────────────────────────────────────────
-// ENTRAR A SALA
+// ENTRAR A SALA (VERSIÓN CORREGIDA)
 // ──────────────────────────────────────────
 async function enterRoom(apptId) {
   currentApptId = apptId;
@@ -337,8 +337,36 @@ async function enterRoom(apptId) {
     const token =
       currentRole === "patient" ? data.patient_token : data.doctor_token;
 
-    room = new LivekitClient.Room({ adaptiveStream: true, dynacast: true });
+    // Crear nueva instancia de room
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+    });
 
+    // ==================== LISTENERS ====================
+    // Listener de chat - CORREGIDO y más robusto
+    room.on(
+      LivekitClient.RoomEvent.DataReceived,
+      (payload, participant, topic) => {
+        if (topic === "chat") {
+          try {
+            const text = new TextDecoder().decode(payload);
+            const isMe =
+              participant &&
+              participant.identity === room.localParticipant.identity;
+            const senderName = isMe
+              ? "Tú"
+              : participant?.name || participant?.identity || "Otro";
+
+            addChatMessage(senderName, text, false); // false = mensaje recibido
+          } catch (e) {
+            console.error("Error procesando mensaje recibido:", e);
+          }
+        }
+      },
+    );
+
+    // Otros listeners
     room.on(LivekitClient.RoomEvent.ParticipantConnected, updateParticipants);
     room.on(
       LivekitClient.RoomEvent.ParticipantDisconnected,
@@ -348,8 +376,9 @@ async function enterRoom(apptId) {
     room.on(
       LivekitClient.RoomEvent.TrackSubscribed,
       (track, _pub, participant) => {
-        if (track.kind === "video")
+        if (track.kind === "video") {
           addVideo(track, participant.identity, false);
+        }
       },
     );
 
@@ -362,14 +391,22 @@ async function enterRoom(apptId) {
 
     room.on(LivekitClient.RoomEvent.Disconnected, () => {
       stopTimer();
+      // Opcional: limpiar chat al desconectar
+      // document.getElementById("chat-messages").innerHTML = "";
       loadDashboard();
     });
 
+    // ==================== CONECTAR ====================
     await room.connect(data.livekit_url, token);
 
+    await loadChatHistory(apptId);
+
     showScreen("screen-room");
-    document.getElementById("room-tag").textContent = data.room_name;
+    document.getElementById("room-tag").textContent =
+      data.room_name || "Sala de consulta";
+
     document.getElementById("video-grid").innerHTML = "";
+    document.getElementById("chat-messages").innerHTML = ""; // Limpiar chat anterior
 
     document.getElementById("user-info-bar").innerHTML = `
       <div class="user-chip">
@@ -380,7 +417,7 @@ async function enterRoom(apptId) {
     startTimer();
     updateParticipants();
 
-    // Publicar tracks
+    // Publicar tracks locales
     let localTracks = [];
     try {
       localTracks = await LivekitClient.createLocalTracks({
@@ -395,17 +432,22 @@ async function enterRoom(apptId) {
         });
         showToast("Sin cámara — conectado con audio");
       } catch {
-        showToast("Conectado sin audio ni video");
+        showToast("Conectado solo con audio");
       }
     }
 
     for (const track of localTracks) {
       await room.localParticipant.publishTrack(track);
-      if (track.kind === "video")
+      if (track.kind === "video") {
         addVideo(track, `${currentUser.name} (tú)`, true);
+      }
     }
+
+    // Cargar mensajes históricos (persistidos)
+    await loadChatHistory(apptId);
   } catch (err) {
-    showToast("Error: " + err.message);
+    console.error(err);
+    showToast("Error al entrar a la sala: " + err.message);
   }
 }
 
@@ -563,15 +605,111 @@ function showToast(msg) {
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2800);
 }
+// ──────────────────────────────────────────
+// CHAT GLOBAL (VERSIÓN CON PERSISTENCIA)
+// ──────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById("chat-text");
+  const message = input.value.trim();
+
+  if (!message || !room || !currentApptId) {
+    return;
+  }
+
+  try {
+    // 1. Guardar el mensaje en el backend (para persistencia)
+    await fetch(`${API_BASE}/appointments/${currentApptId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: message,
+        sender_id: currentUser.id,
+        sender_role: currentRole,
+      }),
+    });
+
+    // 2. Enviar por LiveKit (para que los demás lo vean en tiempo real)
+    await room.localParticipant.sendText(message, { topic: "chat" });
+
+    // 3. Mostrar el mensaje en mi pantalla
+    addChatMessage("Tú", message);
+
+    input.value = "";
+  } catch (err) {
+    console.error(err);
+    showToast("Error enviando mensaje");
+  }
+}
+
+// Cargar historial de mensajes de la cita (persistencia)
+async function loadChatHistory(apptId) {
+  try {
+    const res = await fetch(`${API_BASE}/appointments/${apptId}/chat`);
+
+    if (!res.ok) {
+      console.warn("No se pudo cargar el historial de chat");
+      return;
+    }
+
+    const messages = await res.json();
+
+    const container = document.getElementById("chat-messages");
+    container.innerHTML = ""; // Limpiar chat anterior
+
+    messages.forEach((msg) => {
+      const isMe = msg.sender_id === currentUser.id;
+      const senderName = isMe ? "Tú" : msg.sender_name || "Participante";
+
+      addChatMessage(senderName, msg.message);
+    });
+
+    // Hacer scroll hasta abajo
+    container.scrollTop = container.scrollHeight;
+  } catch (e) {
+    console.warn("Error cargando historial de chat:", e);
+    // No mostramos toast para no molestar al usuario
+  }
+}
+
+function addChatMessage(sender, text) {
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+
+  const msg = document.createElement("div");
+  msg.className = "chat-message";
+  msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
 
 // ──────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   showScreen("screen-role");
+
   ["input-email", "input-document"].forEach((id) => {
     document.getElementById(id)?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleLogin();
     });
   });
+
+  document.getElementById("chat-text")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendMessage();
+  });
 });
+
+// Exponer funciones al scope global
+window.sendMessage = sendMessage;
+window.scheduleAppointment = scheduleAppointment;
+window.selectRole = selectRole;
+window.goBack = goBack;
+window.handleLogin = handleLogin;
+window.enterRoom = enterRoom;
+window.logout = logout;
+window.toggleMic = toggleMic;
+window.toggleCam = toggleCam;
+window.toggleRecording = toggleRecording;
+window.leaveRoom = leaveRoom;
+window.showTab = showTab;

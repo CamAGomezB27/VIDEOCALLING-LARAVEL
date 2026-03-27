@@ -389,6 +389,18 @@
           <span>Conectando a la sala...</span>
         </div>
       </div>
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <div class="chat-input">
+          <input
+            type="text"
+            id="chat-text"
+            placeholder="Escribe un mensaje..."
+          />
+          <button onclick="sendMessage()">Enviar</button>
+        </div>
+      </div>
       <div class="controls">
         <button class="ctrl-btn" id="btn-mic" onclick="toggleMic()">
           <svg
