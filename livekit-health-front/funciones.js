@@ -383,6 +383,12 @@ async function enterRoom(apptId) {
 
     await room.connect(data.livekit_url, token);
 
+    // Cargar historial de mensajes persistentes
+    await loadChatHistory(apptId);
+
+    // Mostrar sala
+    showScreen("screen-room");
+
     // Mostrar sala
     showScreen("screen-room");
     document.getElementById("room-tag").textContent = data.room_name;
@@ -466,24 +472,69 @@ function toggleChat() {
 async function sendChatMessage() {
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
-  if (!text || !room) return;
+  if (!text || !room || !currentApptId || !currentUser) return;
 
-  const msg = JSON.stringify({
+  const messagePayload = {
     type: "chat",
-    text,
+    text: text,
     sender: currentUser.name,
-  });
+    sender_id: currentUser.id,
+    sender_role: currentRole,
+  };
 
   try {
-    // Enviar a todos los participantes via Data Channel
-    await room.localParticipant.publishData(new TextEncoder().encode(msg), {
-      reliable: true,
+    // 1. Guardar el mensaje en la base de datos (persistencia)
+    await fetch(`${API_BASE}/appointments/${currentApptId}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        sender_id: currentUser.id,
+        sender_role: currentRole,
+      }),
     });
-    // Mostrar el mensaje propio
+
+    // 2. Enviar por LiveKit (tiempo real)
+    const encoded = new TextEncoder().encode(JSON.stringify(messagePayload));
+    await room.localParticipant.publishData(encoded, { reliable: true });
+
+    // 3. Mostrar en pantalla
     appendMessage(text, currentUser.name, true);
+
     input.value = "";
   } catch (err) {
-    showToast("Error al enviar: " + err.message);
+    console.error("Error enviando mensaje:", err);
+    showToast("Error al enviar el mensaje");
+  }
+}
+
+// Cargar historial de mensajes desde el backend
+async function loadChatHistory(apptId) {
+  if (!apptId) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/appointments/${apptId}/chat`);
+
+    if (!res.ok) {
+      console.warn("No se pudo cargar el historial de chat");
+      return;
+    }
+
+    const messages = await res.json();
+    const container = document.getElementById("chat-messages");
+
+    // Limpiar el empty state
+    const empty = container.querySelector(".chat-empty");
+    if (empty) empty.remove();
+
+    messages.forEach((msg) => {
+      const isMine = parseInt(msg.sender_id) === parseInt(currentUser.id);
+      appendMessage(msg.message, msg.sender_name || "Participante", isMine);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  } catch (e) {
+    console.warn("Error cargando historial de chat:", e);
   }
 }
 
