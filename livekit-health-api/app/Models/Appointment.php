@@ -31,6 +31,14 @@ class Appointment extends Model
         'duration'     => 'integer',
     ];
 
+    public function markAsCompleted()
+{
+    $this->update([
+        'status' => 'completed',
+        'ended_at' => now(),
+    ]);
+}
+
     // Relaciones
     public function doctor(): BelongsTo
     {

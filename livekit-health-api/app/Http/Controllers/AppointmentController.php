@@ -110,4 +110,27 @@ class AppointmentController extends Controller
 
         return response()->json(['message' => 'Grabación detenida']);
     }
+
+    public function endMeeting(Appointment $appointment)
+{
+    // Opcional: verificar que el usuario actual sea el médico o el paciente de esta cita
+    //$this->authorize('update', $appointment);
+
+    // Cambiar estado a 'completed'
+    $appointment->update([
+        'status' => 'completed',
+        'ended_at' => now(),
+    ]);
+
+    // Si quieres guardar notas finales (opcional)
+    if (request()->has('notes')) {
+        $appointment->update(['notes' => request('notes')]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Reunión finalizada correctamente',
+        'appointment' => $appointment
+    ]);
+}
 }
