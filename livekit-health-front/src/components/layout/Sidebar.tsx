@@ -1,7 +1,7 @@
 "use client";
 
 interface NavItem {
-  id: string;
+  id: "appointments" | "new";
   label: string;
   icon: React.ReactNode;
 }
@@ -11,7 +11,7 @@ interface Props {
   userRole: string;
   isPatient: boolean;
   activeTab: string;
-  onTabChange: (tab: string) => void;
+  onTabChange: (tab: "appointments" | "new") => void;
   onLogout: () => void;
 }
 
