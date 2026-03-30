@@ -8,26 +8,51 @@ import {
 } from "@/features/appointments";
 import type { NewAppointment } from "@/features/appointments/types";
 import { useAuth } from "@/features/auth";
+import type { CurrentUser, Role } from "@/shared/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { getUser, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState("appointments");
+
+  // Obtenemos el usuario de forma síncrona
+  const currentUser = getUser();
+
+  const [activeTab, setActiveTab] = useState<"appointments" | "new">(
+    "appointments",
+  );
   const [toast, setToast] = useState<string | null>(null);
 
-  const user = getUser();
+  // ←←← TODOS LOS HOOKS DEBEN IR AQUÍ ARRIBA ←←←
+  const userId = currentUser?.id ?? 0;
+  const role: Role = currentUser?.role ?? "patient";
 
-  // Redirigir si no hay sesión
-  useEffect(() => {
-    if (!user) router.replace("/");
-  }, [user, router]);
-
+  // Hook llamado incondicionalmente (siempre se ejecuta)
   const { appointments, loading, error, schedule } = useAppointments(
-    user?.id ?? 0,
-    user?.role ?? "patient",
+    userId,
+    role,
   );
+
+  // Efecto de redirección
+  useEffect(() => {
+    if (!currentUser) {
+      router.replace("/");
+    }
+  }, [currentUser, router]);
+
+  // Loader mientras no hay usuario (o mientras se redirige)
+  if (!currentUser) {
+    return (
+      <div className="h-screen bg-[#090e14] flex items-center justify-center">
+        <div className="text-[#5a7a96] font-mono">Cargando dashboard...</div>
+      </div>
+    );
+  }
+
+  // Ahora sí tenemos usuario seguro
+  const user: CurrentUser = currentUser;
+  const isPatient = user.role === "patient";
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -40,13 +65,7 @@ export default function DashboardPage() {
     setActiveTab("appointments");
   };
 
-  const handleLogout = () => {
-    logout();
-  };
-
-  if (!user) return null;
-
-  const isPatient = user.role === "patient";
+  const handleLogout = () => logout();
 
   return (
     <div className="h-screen bg-[#090e14] flex overflow-hidden">
@@ -55,7 +74,7 @@ export default function DashboardPage() {
         userRole={isPatient ? "Paciente" : "Médico"}
         isPatient={isPatient}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => setActiveTab(tab)}
         onLogout={handleLogout}
       />
 
@@ -89,12 +108,11 @@ export default function DashboardPage() {
                 Nueva cita
               </button>
             </div>
-
             <AppointmentList
               appointments={appointments}
               loading={loading}
               error={error}
-              role={user.role}
+              role={role}
             />
           </>
         )}
@@ -109,9 +127,8 @@ export default function DashboardPage() {
                 Programa una nueva consulta virtual
               </p>
             </div>
-
             <ScheduleForm
-              role={user.role}
+              role={role}
               userId={user.id}
               onSchedule={handleSchedule}
               onSuccess={() => setActiveTab("appointments")}
@@ -121,13 +138,12 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Toast */}
       {toast && (
         <div
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-                        bg-[#1a2330] border border-white/10 rounded-xl
-                        px-5 py-3 text-sm text-[#e8f0f7] font-mono
-                        animate-in fade-in slide-in-from-bottom-2"
+                     bg-[#1a2330] border border-white/10 rounded-xl
+                     px-5 py-3 text-sm text-[#e8f0f7] font-mono
+                     animate-in fade-in slide-in-from-bottom-2"
         >
           {toast}
         </div>

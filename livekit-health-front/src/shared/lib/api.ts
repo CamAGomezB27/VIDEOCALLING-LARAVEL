@@ -1,7 +1,11 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL_LARAVEL!;
+const API_PREFIX = "/api";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const cleanPath = path.replace(/^\//, ""); // quita slash inicial
+  const url = `${BASE}${API_PREFIX}/${cleanPath}`;
+
+  const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
