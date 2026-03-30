@@ -1,4 +1,5 @@
 export type Role = "patient" | "doctor";
+export type CurrentUser = (Doctor | Patient) & { role: Role };
 
 export interface Doctor {
   id: number;
