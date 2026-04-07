@@ -1,15 +1,26 @@
 "use client";
 
-import { LocalTrack, RemoteTrack, Track } from "livekit-client";
+import { LocalVideoTrack, RemoteVideoTrack, Track } from "livekit-client";
 import { useEffect, useRef } from "react";
+import type { SpeakingState } from "../types";
+
+/* =========================
+   VideoTile
+========================= */
 
 interface VideoTileProps {
   track: Track;
   identity: string;
   muted?: boolean;
+  speaking?: boolean;
 }
 
-export function VideoTile({ track, identity, muted = false }: VideoTileProps) {
+export function VideoTile({
+  track,
+  identity,
+  muted = false,
+  speaking = false,
+}: VideoTileProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,8 +41,16 @@ export function VideoTile({ track, identity, muted = false }: VideoTileProps) {
   }, [track, muted]);
 
   return (
-    <div className="relative rounded-2xl overflow-hidden bg-[#111820] border border-white/10 flex-1 max-w-3xl aspect-video">
+    <div
+      className={`relative rounded-2xl overflow-hidden bg-[#111820] border flex-1 max-w-3xl aspect-video transition-all duration-200
+        ${
+          speaking
+            ? "border-[#00d4aa] shadow-[0_0_0_2px_rgba(0,212,170,0.4)]"
+            : "border-white/10"
+        }`}
+    >
       <div ref={ref} className="w-full h-full" />
+
       <div className="absolute bottom-3 left-3 text-xs font-medium text-[#e8f0f7] bg-[#090e14]/75 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10 font-mono">
         {identity}
       </div>
@@ -39,18 +58,23 @@ export function VideoTile({ track, identity, muted = false }: VideoTileProps) {
   );
 }
 
-interface RemoteTrackItem {
-  track: RemoteTrack;
-  identity: string;
-}
+/* =========================
+   VideoGrid
+========================= */
 
 interface Props {
-  localTrack: LocalTrack | null;
+  localTrack: LocalVideoTrack | null;
   localIdentity: string;
-  remoteTracks: RemoteTrackItem[];
+  remoteTracks: Array<{ track: RemoteVideoTrack; identity: string }>;
+  speaking: SpeakingState;
 }
 
-export function VideoGrid({ localTrack, localIdentity, remoteTracks }: Props) {
+export function VideoGrid({
+  localTrack,
+  localIdentity,
+  remoteTracks,
+  speaking,
+}: Props) {
   const isEmpty = !localTrack && remoteTracks.length === 0;
 
   if (isEmpty) {
@@ -67,7 +91,7 @@ export function VideoGrid({ localTrack, localIdentity, remoteTracks }: Props) {
       className="flex-1 flex items-center justify-center gap-3 p-5 overflow-hidden"
       style={{
         background: `radial-gradient(ellipse 40% 40% at 50% 50%,
-             rgba(0,212,170,0.03) 0%, transparent 70%), #090e14`,
+          rgba(0,212,170,0.03) 0%, transparent 70%), #090e14`,
       }}
     >
       {localTrack && (
@@ -75,11 +99,17 @@ export function VideoGrid({ localTrack, localIdentity, remoteTracks }: Props) {
           track={localTrack}
           identity={`${localIdentity} (tú)`}
           muted
+          speaking={speaking[localIdentity] ?? false}
         />
       )}
 
       {remoteTracks.map(({ track, identity }) => (
-        <VideoTile key={identity} track={track} identity={identity} />
+        <VideoTile
+          key={identity}
+          track={track}
+          identity={identity}
+          speaking={speaking[identity] ?? false}
+        />
       ))}
     </div>
   );

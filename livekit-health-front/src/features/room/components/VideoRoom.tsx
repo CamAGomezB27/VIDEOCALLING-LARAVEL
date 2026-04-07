@@ -1,14 +1,21 @@
 "use client";
 
 import type { CurrentUser } from "@/features/auth";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
+
 import { ChatPanel } from "@/features/chat/components/ChatPanel";
 import { useChat } from "@/features/chat/hooks/useChat";
-import { formatDuration } from "@/shared/utils/formatDate";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+
 import { useRoom } from "../hooks/useRoom";
 import { Controls } from "./Controls";
+import { HostWaitingPanel } from "./HostWaitingPanel";
+import { PreLobby } from "./PreLobby";
 import { VideoGrid } from "./VideoGrid";
+import { WaitingRoom } from "./WaitingRoom";
+
+import { formatDuration } from "@/shared/utils/formatDate";
+import type { PreLobbyConfig } from "../types";
 
 interface Props {
   appointmentId: number;
@@ -17,68 +24,122 @@ interface Props {
 
 export function VideoRoom({ appointmentId, user }: Props) {
   const router = useRouter();
+
   const [toast, setToast] = useState<string | null>(null);
+  const [showWaitingPanel, setShowWaitingPanel] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }, []);
 
+  const chat = useChat(null, user, appointmentId);
+
   const {
-    room,
+    phase,
+    // room,
     roomName,
-    // connected,
+    localVideoTrack,
+    remoteTracks,
     micEnabled,
     camEnabled,
     isRecording,
     participantCount,
     seconds,
-    localVideoTrack,
-    remoteTracks,
+    speaking,
+    waitingRoom,
+    isHost,
+    identity,
     connect,
     disconnect,
     toggleMic,
     toggleCam,
     toggleRecording,
     endMeeting,
-  } = useRoom(appointmentId, user.role, user.name);
+  } = useRoom(
+    appointmentId,
+    user.role,
+    user.id,
+    user.name,
+    chat.setupListeners, // 👈 AQUÍ está la solución
+  );
 
-  const chat = useChat(room, user, appointmentId);
+  /* ─────────────────────────────
+     PRE-LOBBY → CONNECT
+  ───────────────────────────── */
+  const handleEnter = useCallback(
+    async (config: PreLobbyConfig) => {
+      try {
+        await connect(config, (msg) => chat.addSystemMsg(msg));
+        await chat.loadHistory();
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error al conectar";
+        showToast(message);
+      }
+    },
+    [connect, chat, showToast],
+  );
 
-  // Conectar al montar
-  useEffect(() => {
-    connect(
-      (msg) => chat.addSystemMsg(msg),
-      (r) => chat.setupListeners(r),
-    )
-      .then(() => chat.loadHistory())
-      .catch((err) => showToast("Error al conectar: " + err.message));
-
-    return () => {
-      disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleLeave = async () => {
+  /* ─────────────────────────────
+     LEAVE
+  ───────────────────────────── */
+  const handleLeave = useCallback(async () => {
     await disconnect();
     router.push("/dashboard");
-  };
+  }, [disconnect, router]);
 
-  const handleEndMeeting = async () => {
-    if (!confirm("¿Cerrar la reunión para todos?")) return;
+  /* ─────────────────────────────
+     END MEETING (HOST)
+  ───────────────────────────── */
+  const handleEndMeeting = useCallback(async () => {
+    if (!confirm("¿Cerrar la reunión para todos los participantes?")) return;
     await endMeeting();
     showToast("Reunión finalizada");
     setTimeout(() => router.push("/dashboard"), 800);
-  };
+  }, [endMeeting, router, showToast]);
+
+  /* ─────────────────────────────
+     AUTO OPEN WAITING PANEL
+  ───────────────────────────── */
+  const shouldShowWaitingPanel =
+    isHost && (showWaitingPanel || waitingRoom.waitingList.length > 0);
+
+  /* ─────────────────────────────
+     RENDER POR FASE
+  ───────────────────────────── */
+
+  if (phase === "pre-lobby") {
+    return (
+      <PreLobby
+        userName={user.name}
+        role={user.role}
+        onEnter={handleEnter}
+        onCancel={() => router.push("/dashboard")}
+      />
+    );
+  }
+
+  if (phase === "waiting") {
+    return (
+      <WaitingRoom
+        userName={user.name}
+        message={waitingRoom.waitingMessage}
+        wasRejected={waitingRoom.wasRejected}
+        onLeave={handleLeave}
+      />
+    );
+  }
+
+  /* ─────────────────────────────
+     ACTIVE ROOM
+  ───────────────────────────── */
 
   return (
     <div className="h-screen bg-[#090e14] flex flex-col overflow-hidden">
-      {/* Topbar */}
-      <div
-        className="flex items-center justify-between px-6 py-3.5
-                      bg-[#111820] border-b border-white/10 flex-shrink-0"
-      >
+      {/* TOPBAR */}
+      <div className="flex items-center justify-between px-6 py-3.5 bg-[#111820] border-b border-white/10 flex-shrink-0">
+        {/* LEFT */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-[#00d4aa] animate-pulse" />
@@ -86,87 +147,106 @@ export function VideoRoom({ appointmentId, user }: Props) {
               MediCall
             </span>
           </div>
+
           <div className="w-px h-4 bg-white/10" />
+
           <span className="text-xs text-[#5a7a96] font-mono">
             {roomName || "—"}
           </span>
         </div>
 
+        {/* CENTER USER */}
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full
-                           border font-medium
-                           ${
-                             user.role === "patient"
-                               ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                               : "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/20"
-                           }`}
+            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border font-medium
+              ${
+                user.role === "patient"
+                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                  : "bg-[#00d4aa]/10 text-[#00d4aa] border-[#00d4aa]/20"
+              }`}
           >
             <div
-              className={`w-1.5 h-1.5 rounded-full
-                             ${user.role === "patient" ? "bg-blue-400" : "bg-[#00d4aa]"}`}
+              className={`w-1.5 h-1.5 rounded-full ${
+                user.role === "patient" ? "bg-blue-400" : "bg-[#00d4aa]"
+              }`}
             />
             {user.name} · {user.role === "patient" ? "Paciente" : "Médico"}
           </div>
         </div>
 
+        {/* RIGHT */}
         <div className="flex items-center gap-3">
-          {/* Chat toggle */}
+          {/* WAITING ROOM BUTTON */}
+          {isHost && (
+            <button
+              onClick={() => setShowWaitingPanel((v) => !v)}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all
+                ${
+                  showWaitingPanel
+                    ? "bg-amber-500/15 border-amber-500/35 text-amber-400"
+                    : "bg-[#1a2330] border-white/10 text-[#5a7a96]"
+                }`}
+            >
+              Sala de espera
+              {waitingRoom.waitingList.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-400 text-[#090e14] text-xs rounded-full flex items-center justify-center font-mono">
+                  {waitingRoom.waitingList.length}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* CHAT */}
           <button
             onClick={() => chat.setOpen(!chat.isOpen)}
-            className={`relative w-9 h-9 flex items-center justify-center rounded-xl
-                         border transition-all
-                         ${
-                           chat.isOpen
-                             ? "bg-[#00d4aa]/12 border-[#00d4aa]/35 text-[#00d4aa]"
-                             : "bg-[#1a2330] border-white/10 text-[#5a7a96] hover:text-[#e8f0f7]"
-                         }`}
+            className={`relative w-9 h-9 flex items-center justify-center rounded-xl border
+              ${
+                chat.isOpen
+                  ? "bg-[#00d4aa]/12 border-[#00d4aa]/35 text-[#00d4aa]"
+                  : "bg-[#1a2330] border-white/10 text-[#5a7a96]"
+              }`}
           >
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+            💬
             {chat.unreadCount > 0 && !chat.isOpen && (
-              <span
-                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white
-                               text-xs rounded-full flex items-center justify-center
-                               font-mono leading-none"
-              >
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 {chat.unreadCount > 9 ? "9+" : chat.unreadCount}
               </span>
             )}
           </button>
 
-          {/* Rec indicator */}
-          {isRecording && (
-            <div
-              className="flex items-center gap-1.5 text-xs text-red-400 font-medium
-                            bg-red-500/10 border border-red-500/25 rounded-full px-3 py-1"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              REC
-            </div>
-          )}
+          {/* REC */}
+          {isRecording && <div className="text-xs text-red-400">REC</div>}
 
-          {/* Timer */}
+          {/* TIMER */}
           <span className="text-sm text-[#5a7a96] font-mono">
             {formatDuration(seconds)}
           </span>
         </div>
       </div>
 
-      {/* Body: video + chat */}
+      {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
+        {/* VIDEO */}
         <VideoGrid
           localTrack={localVideoTrack}
-          localIdentity={user.name}
+          localIdentity={identity}
           remoteTracks={remoteTracks}
+          speaking={speaking}
         />
+
+        {/* WAITING PANEL */}
+        {shouldShowWaitingPanel && (
+          <div className="w-72 bg-[#111820] border-l border-white/10">
+            <HostWaitingPanel
+              waitingList={waitingRoom.waitingList}
+              onAdmit={waitingRoom.admit}
+              onReject={waitingRoom.reject}
+              onSendMessage={waitingRoom.sendWaitingMessage}
+            />
+          </div>
+        )}
+
+        {/* CHAT */}
         <ChatPanel
           messages={chat.messages}
           isOpen={chat.isOpen}
@@ -175,12 +255,13 @@ export function VideoRoom({ appointmentId, user }: Props) {
         />
       </div>
 
-      {/* Controls */}
+      {/* CONTROLS */}
       <Controls
         micEnabled={micEnabled}
         camEnabled={camEnabled}
         isRecording={isRecording}
         participantCount={participantCount}
+        isHost={isHost}
         onToggleMic={toggleMic}
         onToggleCam={toggleCam}
         onToggleRecording={toggleRecording}
@@ -188,13 +269,9 @@ export function VideoRoom({ appointmentId, user }: Props) {
         onEndMeeting={handleEndMeeting}
       />
 
-      {/* Toast */}
+      {/* TOAST */}
       {toast && (
-        <div
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50
-                        bg-[#1a2330] border border-white/10 rounded-xl
-                        px-5 py-3 text-sm text-[#e8f0f7] font-mono"
-        >
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#1a2330] px-5 py-3 rounded-xl text-sm text-white">
           {toast}
         </div>
       )}
