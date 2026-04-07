@@ -10,6 +10,7 @@ interface Props {
   onLeave: () => void;
   onEndMeeting: () => void;
   participantCount: number;
+  isHost: boolean;
 }
 
 export function Controls({
@@ -22,6 +23,7 @@ export function Controls({
   onLeave,
   onEndMeeting,
   participantCount,
+  isHost,
 }: Props) {
   const btn = `flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm
                font-medium transition-all`;
@@ -125,23 +127,25 @@ export function Controls({
         Salir
       </button>
 
-      <button
-        onClick={onEndMeeting}
-        className={`${btn} bg-emerald-500/12 border-emerald-500/30
+      {isHost && (
+        <button
+          onClick={onEndMeeting}
+          className={`${btn} bg-emerald-500/12 border-emerald-500/30
                           text-emerald-400 hover:bg-emerald-500/22`}
-      >
-        <svg
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
         >
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-          <polyline points="22 4 12 14.01 9 11.01" />
-        </svg>
-        Cerrar reunión
-      </button>
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          Cerrar reunión
+        </button>
+      )}
 
       <div className="ml-auto flex items-center gap-1.5 text-xs text-[#5a7a96] font-mono">
         <svg
