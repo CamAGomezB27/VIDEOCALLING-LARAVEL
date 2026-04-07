@@ -1,8 +1,7 @@
 "use client";
 
 import type { CurrentUser } from "@/features/auth";
-import type { Room } from "livekit-client";
-import { RoomEvent } from "livekit-client";
+import { RemoteParticipant, Room, RoomEvent } from "livekit-client";
 import { useCallback, useRef, useState } from "react";
 import { chatApi } from "../services/chatApi";
 import type { ChatMessagePayload, ChatMessageUI } from "../types";
@@ -25,8 +24,8 @@ export function useChat(
   }, []);
 
   const addMessage = useCallback((msg: ChatMessageUI) => {
-    setMessages((prev) => [...prev]);
     setMessages((prev) => [...prev, msg]);
+
     if (!isOpenRef.current) {
       setUnread((prev) => prev + 1);
     }
@@ -47,13 +46,29 @@ export function useChat(
   );
 
   // Registrar listener de DataReceived en el room
+  const listenerRef = useRef<
+    ((payload: Uint8Array, participant?: RemoteParticipant) => void) | null
+  >(null);
+
   const setupListeners = useCallback(
     (r: Room) => {
-      r.on(RoomEvent.DataReceived, (payload: Uint8Array) => {
+      // 🔥 limpiar listener anterior
+      if (listenerRef.current) {
+        r.off(RoomEvent.DataReceived, listenerRef.current);
+      }
+
+      const listener = (
+        payload: Uint8Array,
+        _participant?: RemoteParticipant,
+      ) => {
         try {
           const msg: ChatMessagePayload = JSON.parse(
             new TextDecoder().decode(payload),
           );
+
+          // 🔥 filtrar SOLO chat/system
+          if (msg.type !== "chat" && msg.type !== "system") return;
+
           if (msg.type === "chat") {
             addMessage({
               id: crypto.randomUUID(),
@@ -69,9 +84,13 @@ export function useChat(
             addSystemMsg(msg.text);
           }
         } catch {
-          /* payload no válido */
+          // payload inválido
         }
-      });
+      };
+
+      listenerRef.current = listener;
+
+      r.on(RoomEvent.DataReceived, listener);
     },
     [addMessage, addSystemMsg],
   );

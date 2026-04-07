@@ -93,7 +93,26 @@ export function useWaitingRoom(
     ) => {
       switch (msg.type) {
         case "knock":
-          if (isHost && msg.identity && msg.name && msg.role) break;
+          if (isHost && msg.identity && msg.name && msg.role) {
+            // 🔥 fijar valores (esto hace el narrowing REAL)
+            const identity = msg.identity;
+            const name = msg.name;
+            const role = msg.role;
+
+            setWaitingList((prev) => {
+              if (prev.some((p) => p.identity === identity)) return prev;
+
+              const newParticipant: WaitingParticipant = {
+                identity,
+                name,
+                role,
+                joinedAt: Date.now(),
+              };
+
+              return [...prev, newParticipant];
+            });
+          }
+          break;
 
         case "meeting_started":
           if (!isHost) onMeetingStarted();

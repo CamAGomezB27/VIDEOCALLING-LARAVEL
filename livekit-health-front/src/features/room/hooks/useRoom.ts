@@ -93,10 +93,7 @@ export function useRoom(
 
   // ── Conectar al LiveKit room (fase post-pre-lobby) ───────
   const connect = useCallback(
-    async (
-      config: PreLobbyConfig,
-      onSystemMsg: (text: string) => void,
-    ) => {
+    async (config: PreLobbyConfig, onSystemMsg: (text: string) => void) => {
       const data = await livekitApi.join(appointmentId);
       const token = role === "patient" ? data.patient_token : data.doctor_token;
 
@@ -182,13 +179,12 @@ export function useRoom(
       setPartCount(r.remoteParticipants.size + 1);
 
       if (isHost) {
-        // El médico entra directo a active y activa la reunión
+        // El médico entra pero NO abre la reunión
         setPhase("active");
         startTimer();
         await publishTracks(r, config);
-        await waitingRoom.startMeeting();
       } else {
-        // Paciente/tercero: ir a sala de espera y tocar
+        // El paciente SIEMPRE espera
         setPhase("waiting");
         await waitingRoom.knock();
       }
