@@ -96,7 +96,6 @@ export function useRoom(
     async (
       config: PreLobbyConfig,
       onSystemMsg: (text: string) => void,
-      setupChat: (r: Room) => void,
     ) => {
       const data = await livekitApi.join(appointmentId);
       const token = role === "patient" ? data.patient_token : data.doctor_token;
