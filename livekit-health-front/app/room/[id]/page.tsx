@@ -13,10 +13,11 @@ export default function RoomPage({
   const router = useRouter();
   const { getUser } = useAuth();
 
-  const { id } = use(params); // ✅ aquí se resuelve el Promise
+  const { id } = use(params);
+  const appointmentId = parseInt(id);
 
+  // ✅ obtener usuario directamente
   const user = getUser();
-  const appointmentId = parseInt(id); // ✅ ahora sí funciona
 
   useEffect(() => {
     if (!user) {
