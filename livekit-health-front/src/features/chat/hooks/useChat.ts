@@ -6,11 +6,7 @@ import { useCallback, useRef, useState } from "react";
 import { chatApi } from "../services/chatApi";
 import type { ChatMessagePayload, ChatMessageUI } from "../types";
 
-export function useChat(
-  room: Room | null,
-  user: CurrentUser | null,
-  appointmentId: number,
-) {
+export function useChat(user: CurrentUser | null, appointmentId: number) {
   const [messages, setMessages] = useState<ChatMessageUI[]>([]);
   const [unreadCount, setUnread] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -104,7 +100,7 @@ export function useChat(
         id: String(m.id),
         text: m.message,
         sender: m.sender_name,
-        isMine: m.sender_id === user.id,
+        isMine: Number(m.sender_id) === Number(user.id),
         time: new Date(m.created_at).toLocaleTimeString("es-CO", {
           hour: "2-digit",
           minute: "2-digit",
@@ -118,7 +114,7 @@ export function useChat(
 
   // Enviar mensaje
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (room: Room | null, text: string) => {
       if (!room || !user || !text.trim()) return;
 
       const payload: ChatMessagePayload = {
@@ -154,7 +150,7 @@ export function useChat(
         }),
       });
     },
-    [room, user, appointmentId, addMessage],
+    [user, appointmentId, addMessage],
   );
 
   return {
