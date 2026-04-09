@@ -114,6 +114,10 @@ class LiveKitService
         $tokenOptions = (new AccessTokenOptions())
             ->setIdentity($identity)
             ->setName($name)
+            ->setMetadata(json_encode([
+                'name' => $name,
+                'role' => $isAdmin ? 'doctor' : 'patient',
+            ]))
             ->setTtl(3600);  // 3600 segundos = 1 hora
 
         // Forma recomendada actual

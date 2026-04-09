@@ -12,12 +12,10 @@ export default function RoomPage({
 }) {
   const router = useRouter();
   const { getUser } = useAuth();
+  const user = getUser();
 
   const { id } = use(params);
   const appointmentId = parseInt(id);
-
-  // ✅ obtener usuario directamente
-  const user = getUser();
 
   useEffect(() => {
     if (!user) {

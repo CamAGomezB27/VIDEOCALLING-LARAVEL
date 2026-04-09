@@ -174,6 +174,8 @@ export function useRoom(
       );
 
       await r.connect(data.livekit_url, token);
+
+      
       setRoomName(data.room_name);
       setRoom(r);
       setPartCount(r.remoteParticipants.size + 1);
