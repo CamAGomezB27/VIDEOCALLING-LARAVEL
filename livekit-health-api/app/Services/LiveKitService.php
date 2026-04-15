@@ -50,12 +50,11 @@ class LiveKitService
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->generateEgressToken(),
         ])->post(config('livekit.http_url') . '/twirp/livekit.Egress/StartRoomCompositeEgress', [
-            'room_name'    => $roomName,
-            'layout'       => 'grid',          // grid | speaker | single-stream
-            'custom_base_url' => env('LIVEKIT_EGRESS_BASE_URL'),
+            'room_name' => $roomName,
+            'layout' => 'grid',
             'file_outputs' => [[
                 'file_type' => 'MP4',
-                'filepath'  => "/output/{$fileName}",
+                'filepath' => "/output/{$fileName}",
             ]],
         ]);
 
