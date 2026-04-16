@@ -2,21 +2,18 @@
 
 import { useAuth } from "@/features/auth";
 import { VideoRoom } from "@/features/room";
-import { useRouter } from "next/navigation";
-import { use, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useEffect } from "react";
 
-export default function RoomPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function RoomPage() {
   const router = useRouter();
+  const params = useParams();
+
   const { getUser } = useAuth();
-
-  const { id } = use(params); // ✅ aquí se resuelve el Promise
-
   const user = getUser();
-  const appointmentId = parseInt(id); // ✅ ahora sí funciona
+
+  const id = params?.id as string;
+  const appointmentId = parseInt(id, 10);
 
   useEffect(() => {
     if (!user) {
@@ -24,9 +21,13 @@ export default function RoomPage({
     }
   }, [user, router]);
 
-  if (isNaN(appointmentId)) {
+  if (!id || isNaN(appointmentId)) {
     console.error("ID inválido:", id);
-    return <div>Error: ID inválido</div>;
+    return (
+      <div className="h-screen bg-[#090e14] flex items-center justify-center text-white">
+        Error: ID inválido
+      </div>
+    );
   }
 
   if (!user) {

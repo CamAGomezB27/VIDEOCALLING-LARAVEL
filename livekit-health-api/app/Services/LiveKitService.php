@@ -50,11 +50,11 @@ class LiveKitService
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->generateEgressToken(),
         ])->post(config('livekit.http_url') . '/twirp/livekit.Egress/StartRoomCompositeEgress', [
-            'room_name'    => $roomName,
-            'layout'       => 'grid',          // grid | speaker | single-stream
+            'room_name' => $roomName,
+            'layout' => 'grid',
             'file_outputs' => [[
                 'file_type' => 'MP4',
-                'filepath'  => "/output/{$fileName}",
+                'filepath' => "/output/{$fileName}",
             ]],
         ]);
 
@@ -114,6 +114,10 @@ class LiveKitService
         $tokenOptions = (new AccessTokenOptions())
             ->setIdentity($identity)
             ->setName($name)
+            ->setMetadata(json_encode([
+                'name' => $name,
+                'role' => $isAdmin ? 'doctor' : 'patient',
+            ]))
             ->setTtl(3600);  // 3600 segundos = 1 hora
 
         // Forma recomendada actual
