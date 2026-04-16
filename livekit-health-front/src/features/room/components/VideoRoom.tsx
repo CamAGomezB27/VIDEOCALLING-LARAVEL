@@ -33,11 +33,11 @@ export function VideoRoom({ appointmentId, user }: Props) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const chat = useChat(null, user, appointmentId);
+  const chat = useChat(user, appointmentId);
 
   const {
     phase,
-    // room,
+    room,
     roomName,
     localVideoTrack,
     remoteTracks,
@@ -251,7 +251,7 @@ export function VideoRoom({ appointmentId, user }: Props) {
           messages={chat.messages}
           isOpen={chat.isOpen}
           onClose={() => chat.setOpen(false)}
-          onSend={chat.sendMessage}
+          onSend={(text) => chat.sendMessage(room, text)}
         />
       </div>
 

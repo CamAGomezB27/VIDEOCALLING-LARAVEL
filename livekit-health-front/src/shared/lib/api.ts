@@ -5,10 +5,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const cleanPath = path.replace(/^\//, ""); // quita slash inicial
   const url = `${BASE}${API_PREFIX}/${cleanPath}`;
 
+  console.log("🚀 REQUEST:", options?.method || "GET", url);
+
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+
+  console.log("✅ RESPONSE:", res.status, url);
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
