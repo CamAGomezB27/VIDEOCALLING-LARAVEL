@@ -80,7 +80,7 @@ export default function DashboardPage() {
                 onClick={() => setActiveTab("new")}
                 className="flex items-center gap-2 px-4 py-2 bg-[#00d4aa]
                            text-[#04342c] text-sm font-medium rounded-xl
-                           hover:bg-[#00e8ba] transition-colors"
+                           hover:bg-[#00e8ba] transition-colors cursor-pointer"
               >
                 Nueva cita
               </button>
