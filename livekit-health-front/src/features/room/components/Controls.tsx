@@ -1,18 +1,5 @@
 "use client";
 
-interface Props {
-  micEnabled: boolean;
-  camEnabled: boolean;
-  isRecording: boolean;
-  onToggleMic: () => void;
-  onToggleCam: () => void;
-  onToggleRecording: () => void;
-  onLeave: () => void;
-  onEndMeeting: () => void;
-  participantCount: number;
-  isHost: boolean;
-}
-
 export function Controls({
   micEnabled,
   camEnabled,
@@ -25,24 +12,22 @@ export function Controls({
   participantCount,
   isHost,
 }: Props) {
-  const btn = `flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm
-               font-medium transition-all`;
+  const btn =
+    "flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-150 hover:brightness-110 active:scale-[0.98]";
 
   return (
-    <div
-      className="flex items-center justify-center gap-2.5 px-6 py-4
-                    bg-[#111820] border-t border-white/10 flex-shrink-0"
-    >
+    <div className="flex items-center justify-center gap-2.5 px-6 py-4 bg-[#111820] border-t border-white/10 flex-shrink-0">
+      {/* MIC */}
       <button
         onClick={onToggleMic}
-        className={`${btn} ${
+        className={`${btn} cursor-pointer ${
           micEnabled
-            ? "bg-[#1a2330] border-white/10 text-[#e8f0f7] hover:border-white/20"
-            : "bg-[#00d4aa]/12 border-[#00d4aa]/35 text-[#00d4aa]"
+            ? "bg-[#1a2330] border-white/15 text-[#e8f0f7]"
+            : "bg-[#00d4aa]/10 border-[#00d4aa]/40 text-[#00d4aa]"
         }`}
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 opacity-90"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -51,48 +36,49 @@ export function Controls({
           {micEnabled ? (
             <>
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             </>
           ) : (
             <>
               <line x1="1" y1="1" x2="23" y2="23" />
-              <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-              <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8" />
+              <path d="M9 9v3a3 3 0 0 0 5 2" />
             </>
           )}
         </svg>
         Mic
       </button>
 
+      {/* CAM */}
       <button
         onClick={onToggleCam}
-        className={`${btn} ${
+        className={`${btn} cursor-pointer ${
           camEnabled
-            ? "bg-[#1a2330] border-white/10 text-[#e8f0f7] hover:border-white/20"
-            : "bg-[#00d4aa]/12 border-[#00d4aa]/35 text-[#00d4aa]"
+            ? "bg-[#1a2330] border-white/15 text-[#e8f0f7]"
+            : "bg-[#00d4aa]/10 border-[#00d4aa]/40 text-[#00d4aa]"
         }`}
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 opacity-90"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
         >
           <path d="M23 7l-7 5 7 5V7z" />
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          <rect x="1" y="5" width="15" height="14" rx="2" />
         </svg>
         Cámara
       </button>
 
       <div className="w-px h-8 bg-white/10 flex-shrink-0" />
 
+      {/* RECORD */}
       <button
         onClick={onToggleRecording}
         className={`${btn} ${
           isRecording
-            ? "bg-red-500/12 border-red-500/35 text-red-400"
-            : "bg-[#1a2330] border-white/10 text-[#e8f0f7] hover:border-white/20"
+            ? "bg-red-500/15 border-red-500/40 text-red-400 shadow-sm shadow-red-500/10"
+            : "bg-[#1a2330] border-white/15 text-[#e8f0f7] cursor-pointer"
         }`}
       >
         <svg
@@ -110,46 +96,48 @@ export function Controls({
 
       <div className="w-px h-8 bg-white/10 flex-shrink-0" />
 
+      {/* LEAVE */}
       <button
         onClick={onLeave}
-        className={`${btn} bg-red-500/12 border-red-500/30 text-red-400
-                          hover:bg-red-500/22`}
+        className={`${btn} bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 cursor-pointer`}
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 opacity-90"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
         >
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <path d="M16 17l5-5-5-5" />
         </svg>
         Salir
       </button>
 
+      {/* END MEETING */}
       {isHost && (
         <button
           onClick={onEndMeeting}
-          className={`${btn} bg-emerald-500/12 border-emerald-500/30
-                          text-emerald-400 hover:bg-emerald-500/22`}
+          className={`${btn} bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer`}
         >
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 opacity-90"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
           >
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
+            <polyline points="22 4 12 14 9 11" />
           </svg>
           Cerrar reunión
         </button>
       )}
 
-      <div className="ml-auto flex items-center gap-1.5 text-xs text-[#5a7a96] font-mono">
+      {/* PARTICIPANTES */}
+      <div className="ml-auto flex items-center gap-1.5 text-xs text-[#6f8aa3] font-mono">
         <svg
-          className="w-3.5 h-3.5"
+          className="w-3.5 h-3.5 opacity-70"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -157,7 +145,6 @@ export function Controls({
         >
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
         {participantCount} participante{participantCount !== 1 ? "s" : ""}
       </div>
