@@ -139,7 +139,7 @@ export function PreLobby({ userName, role, onEnter, onCancel }: Props) {
               </span>
               <button
                 onClick={() => setMicEnabled((v) => !v)}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 cursor-pointer ${
                   micEnabled
                     ? "bg-[#00d4aa]"
                     : "bg-[#1a2330] border border-white/20"
@@ -177,7 +177,7 @@ export function PreLobby({ userName, role, onEnter, onCancel }: Props) {
               <span className="text-sm font-medium text-[#e8f0f7]">Cámara</span>
               <button
                 onClick={() => setCamEnabled((v) => !v)}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-300 ${
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 cursor-pointer ${
                   camEnabled
                     ? "bg-[#00d4aa]"
                     : "bg-[#1a2330] border border-white/20"
@@ -226,13 +226,21 @@ export function PreLobby({ userName, role, onEnter, onCancel }: Props) {
       <div className="flex flex-col gap-4 mt-8 w-full max-w-sm">
         <button
           onClick={handleEnter}
-          className="py-4 rounded-2xl bg-[#00d4aa] text-[#04342c] font-bold text-lg hover:bg-[#00e8ba] shadow-xl transition-all"
+          className="py-4 rounded-2xl bg-[#00d4aa] text-[#04342c] font-bold text-lg
+             shadow-lg shadow-[#00d4aa]/20
+             transition-all duration-300
+             hover:bg-[#00e8ba]
+             hover:shadow-[#00d4aa]/40
+             hover:scale-[1.02]
+             active:scale-[0.98]
+             focus-visible:outline-none focus-visible:ring-0
+             cursor-pointer"
         >
           {isHost ? "Abrir reunión" : "Unirme"}
         </button>
         <button
           onClick={onCancel}
-          className="py-3 rounded-2xl bg-[#111820] border border-[#00d4aa] text-[#00d4aa] font-semibold text-center hover:bg-[#00d4aa] hover:text-[#04342c] shadow-md transition-all"
+          className="py-3 rounded-2xl bg-[#111820] border border-[#00d4aa] text-[#00d4aa] font-semibold text-center hover:bg-[#00d4aa] hover:text-[#04342c] shadow-md transition-all cursor-pointer"
         >
           Cancelar
         </button>
