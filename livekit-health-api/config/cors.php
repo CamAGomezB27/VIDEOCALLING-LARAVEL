@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'], // 👈 esto permite cualquier origen
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

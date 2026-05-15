@@ -2,8 +2,9 @@
 const nextConfig = {
   allowedDevOrigins: [
     "*.trycloudflare.com",
+    "localhost",
     "*.localhost",
-    "localhost:3000",
+    "192.168.2.*",
   ],
 };
 
