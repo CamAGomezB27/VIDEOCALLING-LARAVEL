@@ -36,7 +36,7 @@ export function useRoom(
     null,
   );
   const [remoteTracks, setRemoteTracks] = useState<
-    Array<{ track: RemoteVideoTrack; identity: string }>
+    Array<{ track: RemoteVideoTrack; identity: string; name: string }>
   >([]);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
@@ -123,6 +123,7 @@ export function useRoom(
               {
                 track: track as RemoteVideoTrack,
                 identity: participant.identity,
+                name: participant.name || participant.identity,
               },
             ]);
           }
@@ -179,7 +180,6 @@ export function useRoom(
         window.dispatchEvent(new Event("START_RECORDING"));
       }
 
-      
       setRoomName(data.room_name);
       setRoom(r);
       setPartCount(r.remoteParticipants.size + 1);

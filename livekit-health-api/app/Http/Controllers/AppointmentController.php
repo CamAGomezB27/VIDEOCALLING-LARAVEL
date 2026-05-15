@@ -81,8 +81,20 @@ class AppointmentController extends Controller
         return response()->json([
             'room_name'     => $data['room_name'],
             'livekit_url'   => config('livekit.url'),
+
             'patient_token' => $data['patient_token'],
             'doctor_token'  => $data['doctor_token'],
+
+            // 🔥 NOMBRES LISTOS PARA FRONTEND
+            'patient' => [
+                'id'   => $appointment->patient_id,
+                'name' => $appointment->patient?->name ?? 'Paciente',
+            ],
+
+            'doctor' => [
+                'id'   => $appointment->doctor_id,
+                'name' => $appointment->doctor?->name ?? 'Doctor',
+            ],
         ]);
     }
 

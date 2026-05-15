@@ -1,6 +1,6 @@
 "use client";
 
-import { LocalVideoTrack, RemoteVideoTrack, Track } from "livekit-client";
+import { LocalVideoTrack, RemoteVideoTrack } from "livekit-client";
 import { useEffect, useRef } from "react";
 import type { SpeakingState } from "../types";
 
@@ -9,7 +9,7 @@ import type { SpeakingState } from "../types";
 ========================= */
 
 interface VideoTileProps {
-  track: Track;
+  track: LocalVideoTrack | RemoteVideoTrack;
   identity: string;
   muted?: boolean;
   speaking?: boolean;
@@ -26,7 +26,7 @@ export function VideoTile({
   useEffect(() => {
     if (!ref.current) return;
 
-    const el = track.attach() as HTMLMediaElement;
+    const el = track.attach() as HTMLVideoElement | HTMLAudioElement;
 
     el.muted = muted;
     el.style.width = "100%";
@@ -70,7 +70,11 @@ export function VideoTile({
 interface Props {
   localTrack: LocalVideoTrack | null;
   localIdentity: string;
-  remoteTracks: Array<{ track: RemoteVideoTrack; identity: string }>;
+  remoteTracks: Array<{
+    track: RemoteVideoTrack;
+    identity: string;
+    name?: string;
+  }>;
   speaking: SpeakingState;
 }
 
@@ -85,15 +89,17 @@ export function VideoGrid({
       ? [
           {
             track: localTrack,
-            identity: `${localIdentity} (tú)`,
+            identity: localIdentity,
+            name: "Tú",
             isLocal: true,
           },
         ]
       : []),
 
-    ...remoteTracks.map(({ track, identity }) => ({
+    ...remoteTracks.map(({ track, identity, name }) => ({
       track,
       identity,
+      name: name ?? identity,
       isLocal: false,
     })),
   ];
@@ -124,7 +130,7 @@ export function VideoGrid({
         <VideoTile
           key={p.identity}
           track={p.track}
-          identity={p.identity}
+          identity={p.name}
           muted={p.isLocal}
           speaking={speaking?.[p.identity] ?? false}
         />
@@ -138,29 +144,12 @@ export function VideoGrid({
 ========================= */
 
 function getGridClass(count: number) {
-  if (count === 1) {
-    return "grid-cols-1 grid-rows-1";
-  }
-
-  if (count === 2) {
-    return "grid-cols-2 grid-rows-1";
-  }
-
-  if (count === 3) {
-    return "grid-cols-2 grid-rows-2";
-  }
-
-  if (count === 4) {
-    return "grid-cols-2 grid-rows-2";
-  }
-
-  if (count <= 6) {
-    return "grid-cols-3 grid-rows-2";
-  }
-
-  if (count <= 9) {
-    return "grid-cols-3 grid-rows-3";
-  }
+  if (count === 1) return "grid-cols-1 grid-rows-1";
+  if (count === 2) return "grid-cols-2 grid-rows-1";
+  if (count === 3) return "grid-cols-2 grid-rows-2";
+  if (count === 4) return "grid-cols-2 grid-rows-2";
+  if (count <= 6) return "grid-cols-3 grid-rows-2";
+  if (count <= 9) return "grid-cols-3 grid-rows-3";
 
   return "grid-cols-4 auto-rows-fr";
 }
